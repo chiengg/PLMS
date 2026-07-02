@@ -55,6 +55,6 @@ export default function App() {
           <Route path="generate-purchase-order" element={<GenerateOrder />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
