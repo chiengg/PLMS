@@ -1,0 +1,101 @@
+<h2>采购建议：通用能力设计方案</h2>
+<p class="subtitle">对齐你给的关键规则：按供应商分组 + 组头汇总(1/2/3) + 加入计划按采购员 + 忽略(本次/永久)+忽略管理表</p>
+
+<div class="cards">
+  <div class="card" data-choice="approach-a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">方案 A：页面内直出（推荐）</div>
+        <div class="mockup-body">
+          <div class="mock-nav">采购建议 / 备货建议 | 缺货建议</div>
+          <div class="placeholder" style="margin-top:10px">筛选区：SKU/名称、仓库、供应商、采购员 + 搜索/重置</div>
+          <div class="placeholder" style="margin-top:10px">分组表格（按供应商）：组头=SKU数/建议数/金额 + 展开SKU行 + 勾选/批量操作</div>
+          <div class="placeholder" style="margin-top:10px">批量操作：加入采购计划（按采购员拆分）｜忽略（本次/永久）</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>方案 A：页面内闭环</h3>
+      <p>主页面完成筛选-选中-批量动作；忽略管理在同页弹窗/抽屉打开</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>流程短，采购员操作最少</li>
+            <li>逻辑集中，状态可控（筛选/选中/批量/忽略）</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>注意点</h4>
+          <ul>
+            <li>同页状态较多，需要清晰的状态模型</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="approach-b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">方案 B：拆出“加入计划向导”</div>
+        <div class="mockup-body">
+          <div class="mock-nav">采购建议（筛选+分组表格）</div>
+          <div class="placeholder" style="margin-top:10px">点击“加入采购计划”→ 向导 Step1: 确认采购员拆分</div>
+          <div class="placeholder" style="margin-top:10px">Step2: 各采购员计划预览（数量/金额）→ 确认加入</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>方案 B：向导降低误操作</h3>
+      <p>把“按采购员拆分”的决策显式化，支持预览与二次确认</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>更适合一次选中很多SKU的场景</li>
+            <li>拆分规则更透明，可加校验</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>步骤变长，操作成本更高</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="approach-c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">方案 C：忽略管理独立页面</div>
+        <div class="mockup-body">
+          <div class="mock-nav">采购建议（筛选+分组表格）</div>
+          <div class="placeholder" style="margin-top:10px">忽略后从列表消失</div>
+          <div class="placeholder" style="margin-top:10px">“忽略管理”作为单独路由：可恢复/清除</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>方案 C：忽略治理更可见</h3>
+      <p>忽略量大时更清晰，但需要新增菜单/路由占位</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>历史可追溯，便于治理与审计</li>
+            <li>避免弹窗承载过多功能</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>信息架构更重，需要新增入口</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

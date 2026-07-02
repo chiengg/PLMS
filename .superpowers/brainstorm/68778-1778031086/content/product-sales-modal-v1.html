@@ -1,0 +1,44 @@
+<h2>商品页：预测日销量弹框（线框图）</h2>
+<p class="subtitle">点击“预测日销量”右侧 icon 后弹出；展示库存SKU与近一月数据折线图，支持日期区间/仓库/平台筛选</p>
+
+<div class="mockup">
+  <div class="mockup-header">日销量/剩余库存趋势 —— 10006231-0-A0-TSG（示例）</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <div class="placeholder" style="padding:10px 12px;min-width:280px">日期区间：开始日期 — 结束日期</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:200px">按仓库查看（下拉）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:200px">按平台查看（下拉）</div>
+      <button class="mock-button" style="margin-left:auto">查询</button>
+      <button class="mock-button" style="background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe">重置</button>
+    </div>
+
+    <div class="placeholder" style="margin-top:12px;height:320px;display:flex;align-items:center;justify-content:center">
+      折线图区域（近 1 个月，按天）
+    </div>
+
+    <div class="section" style="margin-top:10px">
+      <div class="label">说明</div>
+      <p class="subtitle" style="margin:6px 0 0 0">筛选变更后点击“查询”刷新图表；默认展示近 30 天。</p>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:18px">图表展示内容选择</h3>
+<p class="subtitle">你希望默认展示哪种？（可点击选择）</p>
+
+<div class="options">
+  <div class="option" data-choice="sales-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>仅展示日销量</h3>
+      <p>单折线：销量（更贴合“预测日销量”入口）</p>
+    </div>
+  </div>
+  <div class="option" data-choice="sales-and-stock" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>展示日销量 + 剩余库存</h3>
+      <p>双折线（或可切换）：销量与库存同屏趋势对比</p>
+    </div>
+  </div>
+</div>

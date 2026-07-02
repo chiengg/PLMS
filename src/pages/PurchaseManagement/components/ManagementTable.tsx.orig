@@ -1,0 +1,1582 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuGroup
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ChevronDown, MoreHorizontal, Edit2, Copy, FileText, Truck, MapPin, HelpCircle, List, MessageSquare, ChevronsUp, Home, Layers, Minus, Plus, Search, Send } from 'lucide-react';
+import { mockOrders } from '../mockData';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { cn } from '@/lib/utils';
+import MergeTable from './MergeTable';
+import NewOrderTable from './NewOrderTable';
+import AddItemsPage from './AddItemsPage';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+export default function ManagementTable({ activeTab = '全部', filterValues = {}, setHideFilter }: { activeTab?: string, filterValues?: any, setHideFilter?: (hide: boolean) => void }) {
+  const [orders, setOrders] = useLocalStorage<any[]>('purchase_orders_data_v4', mockOrders);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [editingExtraFeeId, setEditingExtraFeeId] = useState<string | null>(null);
+  const [extraFeeInput, setExtraFeeInput] = useState('');
+  const [restoreOrderId, setRestoreOrderId] = useState<string | null>(null);
+
+  // Modals state
+  const [editProductLinkOpen, setEditProductLinkOpen] = useState(false);
+  const [productLinkInput, setProductLinkInput] = useState('');
+  
+  const [inboundDetailOpen, setInboundDetailOpen] = useState(false);
+  const [currentInboundSku, setCurrentInboundSku] = useState('');
+
+  const [editArriveDateOpen, setEditArriveDateOpen] = useState(false);
+  const [arriveDateInput, setArriveDateInput] = useState('');
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyActiveTab, setHistoryActiveTab] = useState<'history'|'plan'>('history');
+  const [operationLogOpen, setOperationLogOpen] = useState(false);
+
+  // New States for matched features
+  const [addLogisticsId, setAddLogisticsId] = useState<string | null>(null);
+  const [logisticsRows, setLogisticsRows] = useState<any[]>([{ id: 1, fee: '0.00', company: '', no: '' }]);
+  
+  const [auditOrderId, setAuditOrderId] = useState<string | null>(null);
+  
+  const [splitOrderId, setSplitOrderId] = useState<string | null>(null);
+  const [splitSelections, setSplitSelections] = useState<Record<number, boolean>>({});
+  const [splitQuantities, setSplitQuantities] = useState<Record<number, number>>({});
+  
+  const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
+  
+  const [editOrderId, setEditOrderId] = useState<string | null>(null);
+  const [editItemsData, setEditItemsData] = useState<any[]>([]);
+  const [batchAdjustOpen, setBatchAdjustOpen] = useState(false);
+  const [batchAdjustText, setBatchAdjustText] = useState("");
+
+  const [voidOrderId, setVoidOrderId] = useState<string | null>(null);
+  const [voidType, setVoidType] = useState<'all' | 'partial'>('all');
+  const [voidSearchKeyword, setVoidSearchKeyword] = useState('');
+  const [voidSelections, setVoidSelections] = useState<Record<number, boolean>>({});
+  const [voidQuantities, setVoidQuantities] = useState<Record<number, number>>({});
+  const [voidSyncPlatform, setVoidSyncPlatform] = useState(false);
+  
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (editOrderId) {
+      const order = orders.find((o: any) => o.id === editOrderId);
+      if (order && order.items) {
+        setEditItemsData(order.items.map((item: any) => ({
+          ...item,
+          editQuantity: item.quantity || 0,
+          editPrice: item.price || 0,
+          editDiscount: item.discount || 0
+        })));
+      }
+    } else {
+      setEditItemsData([]);
+    }
+  }, [editOrderId, orders]);
+
+  if (activeTab === '待合并') {
+    return <MergeTable orders={orders} setOrders={setOrders} filterValues={filterValues} />;
+  }
+
+  if (activeTab === '新订单') {
+    return <NewOrderTable orders={orders} filterValues={filterValues} setOrders={setOrders} setHideFilter={setHideFilter} />;
+  }
+
+  if (addItemsOrderId) {
+    const activeOrder = orders.find((o: any) => o.id === addItemsOrderId);
+    if (activeOrder) {
+      if (setHideFilter) setHideFilter(true);
+      return (
+        <AddItemsPage 
+          order={activeOrder} 
+          onClose={() => {
+            setAddItemsOrderId(null);
+            if (setHideFilter) setHideFilter(false);
+          }} 
+          onSubmit={(newItems) => {
+            setOrders((prev: any[]) => prev.map(o => {
+              if (o.id === activeOrder.id) {
+                const currentItems = o.items || [];
+                const mergedItems = [...currentItems, ...newItems];
+                return {
+                  ...o,
+                  items: mergedItems,
+                  totalQuantity: mergedItems.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0),
+                  totalPrice: mergedItems.reduce((acc: number, cur: any) => acc + (cur.totalAmount || 0), 0)
+                };
+              }
+              return o;
+            }));
+            setAddItemsOrderId(null);
+            if (setHideFilter) setHideFilter(false);
+            setToastMessage('商品追加成功');
+            setTimeout(() => setToastMessage(null), 2000);
+          }} 
+        />
+      );
+    }
+  }
+
+  const getOperations = (status: string, activeTab: string) => {
+    if (activeTab === '采购审核') {
+      return ['审核通过', '驳回', '查看合同'];
+    }
+    switch (status) {
+      case '待提交':
+      case '被驳回':
+      case '新订单（未提交）':
+        return ['提交采购单', '拆分采购单', '追加商品', '编辑', '作废', '查看合同'];
+      case '待审核':
+      case '新订单（待审核）':
+        return ['编辑', '撤回审核', '查看合同'];
+      case '采购中':
+        return ['拆分采购单', '追加商品', '编辑', '作废', '查看合同', '验货入库', '申请付款', '标记已完成'];
+      case '已完成':
+        return ['编辑', '申请退货', '再次采购', '查看合同'];
+      case '已作废':
+        return ['还原'];
+      default:
+        return ['编辑', '查看合同'];
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) setSelectedOrders(orders.map(o => o.id));
+    else setSelectedOrders([]);
+  };
+
+  const handleSelect = (checked: boolean, id: string) => {
+    if (checked) setSelectedOrders([...selectedOrders, id]);
+    else setSelectedOrders(selectedOrders.filter(oId => oId !== id));
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleAllExpand = () => {
+    const allExpanded = orders.every((o: any) => expandedRows[o.id]);
+    if (allExpanded) {
+      setExpandedRows({});
+    } else {
+      const newExpanded: Record<string, boolean> = {};
+      orders.forEach((o: any) => {
+        newExpanded[o.id] = true;
+      });
+      setExpandedRows(newExpanded);
+    }
+  };
+
+  const handleSaveExtraFee = (id: string) => {
+    const val = parseFloat(extraFeeInput);
+    if (!isNaN(val) && val >= 0) {
+      setOrders(orders.map(o => o.id === id ? { ...o, extraFee: Number(val.toFixed(2)) } : o));
+    }
+    setEditingExtraFeeId(null);
+  };
+
+  const handleOperation = (op: string, orderId: string) => {
+    if (op === '审核通过') {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setOrders(orders.map(o => {
+          if (o.id === orderId) {
+            return { ...o, status: '采购中' };
+          }
+          return o;
+        }));
+        alert('审核通过，订单已流转至采购中');
+      }
+    } else if (op === '驳回' || op === '撤回审核') {
+      setOrders(orders.map(o => {
+        if (o.id === orderId) {
+          return { ...o, status: '新订单（未提交）' };
+        }
+        return o;
+      }));
+      alert(op + '成功');
+    } else if (op === '还原') {
+      setRestoreOrderId(orderId);
+    } else if (op === '拆分采购单') {
+      setSplitOrderId(orderId);
+      setSplitSelections({});
+      setSplitQuantities({});
+    } else if (op === '追加商品') {
+      setAddItemsOrderId(orderId);
+    } else if (op === '编辑') {
+      setEditOrderId(orderId);
+    } else if (op === '作废') {
+      setVoidOrderId(orderId);
+    } else if (op === '验货入库' || op === '申请付款' || op === '标记已完成') {
+      alert(`点击了【${op}】`);
+    } else if (op === '查看合同') {
+      window.open('/contract', '_blank');
+    }
+  };
+
+  return (
+    <div className="flex-1 bg-white rounded border border-gray-200 mt-4 flex flex-col overflow-hidden">
+      {/* Action Bar */}
+      <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <span className="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 bg-blue-600 hover:bg-blue-700 text-[13px] gap-1 px-3 text-white cursor-pointer">
+                <Layers className="w-4 h-4" />
+                批量操作
+                <ChevronDown className="w-3 h-3" />
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48" align="start">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">批量更新采购单</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-56 ml-1">
+                    <DropdownMenuItem className="text-[13px]">更新在途量</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量修改运单号/运费</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量标记付款</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量更换下单员</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量更换采购员</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量作废采购单</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量更新运费支付方式</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px] flex items-center justify-between">批量更新超收数量 <HelpCircle className="w-3 h-3 text-blue-500" /></DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量更新发票类型和税金</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px] flex items-center justify-between">批量标记已开票 <HelpCircle className="w-3 h-3 text-blue-500" /></DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量更新运费分摊方式</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量修改备注</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px] flex items-center justify-between">批量更换供应商 <HelpCircle className="w-3 h-3 text-blue-500" /></DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">批量修改关联订单号</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">缺货订单</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-36 ml-1">
+                    <DropdownMenuItem className="text-[13px]">待处理订单</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">配货中订单</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">批量设置参与在途计算</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-24 ml-1">
+                    <DropdownMenuItem className="text-[13px]">参与</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">不参与</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">打印中心</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-40 ml-1">
+                    <DropdownMenuItem className="text-[13px]">打印库存SKU标签</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">采购单标签</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">装箱信息</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuItem className="text-[13px]">批量生成序列号</DropdownMenuItem>
+              <DropdownMenuItem className="text-[13px] flex items-center justify-between">批量拆分采购 <HelpCircle className="w-3 h-3 text-blue-500" /></DropdownMenuItem>
+              
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">批量标记不再来货</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-24 ml-1">
+                    <DropdownMenuItem className="text-[13px]">标记</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">取消标记</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">采购单合并</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-32 ml-1">
+                    <DropdownMenuItem className="text-[13px]">合并</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">标记不合并</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">标记合并</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuItem className="text-[13px]">设置固定分类</DropdownMenuItem>
+              
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[13px]">设置自定义分类</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-32 ml-1">
+                    <DropdownMenuItem className="text-[13px]">未分类</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[13px]">默认分类</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuItem className="text-[13px]">批量打印采购合同</DropdownMenuItem>
+              <DropdownMenuItem className="text-[13px]">批量打印入库单明细</DropdownMenuItem>
+              <DropdownMenuItem className="text-[13px] flex items-center justify-between">
+                批量上传附件 <span className="bg-pink-500 text-white text-[10px] px-1 rounded-sm leading-tight ml-2">new</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button className="h-8 bg-blue-600 hover:bg-blue-700 text-[13px]">创建采购单</Button>
+          <Button variant="outline" className="h-8 text-[13px] border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700">导入采购单</Button>
+          <Button variant="outline" className="h-8 text-[13px]">打印</Button>
+          <Button variant="outline" className="h-8 text-[13px]">更多 <ChevronDown className="w-3 h-3 ml-1" /></Button>
+          {/* Modals Implemented Based on Requirements */}
+
+      {/* 2. 商品链接修改 */}
+      <Dialog open={editProductLinkOpen} onOpenChange={setEditProductLinkOpen}>
+        <DialogContent className="max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-[15px] font-normal">修改商品链接</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input 
+              placeholder="请输入商品链接地址 (如: https://...)" 
+              value={productLinkInput}
+              onChange={e => setProductLinkInput(e.target.value)}
+              className="text-[13px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="h-8 px-6 text-gray-600 bg-white" onClick={() => setEditProductLinkOpen(false)}>取消</Button>
+            <Button 
+              className="h-8 px-6 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white" 
+              onClick={() => {
+                if (productLinkInput && !productLinkInput.startsWith('http')) {
+                  alert('请输入有效的 http 或 https 链接');
+                  return;
+                }
+                alert('商品链接保存成功！(Mock)');
+                setEditProductLinkOpen(false);
+              }}
+            >
+              确定
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. 查看入库明细 */}
+      <Dialog open={inboundDetailOpen} onOpenChange={setInboundDetailOpen}>
+        <DialogContent className="max-w-[800px] p-0 gap-0">
+          <DialogHeader className="p-4 border-b border-gray-200 bg-white">
+            <DialogTitle className="text-[15px] font-normal text-gray-800">
+              查看入库明细- 【{currentInboundSku}】
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 bg-white">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-[#F8F9FA] text-gray-500">
+                <tr>
+                  <th className="p-3 font-normal text-center">入库时间</th>
+                  <th className="p-3 font-normal text-center">入库仓库</th>
+                  <th className="p-3 font-normal text-center">入库仓位</th>
+                  <th className="p-3 font-normal text-center">不良品仓</th>
+                  <th className="p-3 font-normal text-center">入库量</th>
+                  <th className="p-3 font-normal text-center">损耗量</th>
+                  <th className="p-3 font-normal text-center">异常原因</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-400 border-b border-gray-100">
+                    暂无入库数据
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="mt-4 flex items-center text-gray-500 text-[13px] gap-4">
+              <span>共 0 条</span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-gray-50" disabled>&lt;</Button>
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-blue-500 text-white border-blue-500">1</Button>
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-gray-50" disabled>&gt;</Button>
+              </div>
+              <select className="border border-gray-300 rounded px-2 h-7 text-[12px] outline-none">
+                <option>10条/页</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter className="p-3 border-t border-gray-200 bg-gray-50/50 mx-0 mb-0">
+            <Button variant="outline" className="h-8 px-6 text-gray-600 bg-white" onClick={() => setInboundDetailOpen(false)}>关闭</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4. 修改预计到货时间 */}
+      <Dialog open={editArriveDateOpen} onOpenChange={setEditArriveDateOpen}>
+        <DialogContent className="max-w-[600px] p-0 gap-0">
+          <DialogHeader className="p-4 border-b border-gray-200">
+            <DialogTitle className="text-[14px] font-normal text-gray-800">修改商品维度预计到货时间</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col text-[13px]">
+            <div className="flex border-b border-gray-100">
+              <div className="w-1/3 p-4 text-right text-gray-600 bg-gray-50/30">采购单号</div>
+              <div className="w-2/3 p-4 text-gray-800">1570553252</div>
+            </div>
+            <div className="flex border-b border-gray-100">
+              <div className="w-1/3 p-4 text-right text-gray-600 bg-gray-50/30">SKU</div>
+              <div className="w-2/3 p-4 text-gray-800">10005924-AT-A1-2Y-BPP</div>
+            </div>
+            <div className="flex border-b border-gray-100 items-center">
+              <div className="w-1/3 p-4 text-right text-gray-600 bg-gray-50/30 font-medium">商品维度到货时间</div>
+              <div className="w-2/3 p-4">
+                <Input 
+                  type="date"
+                  value={arriveDateInput}
+                  onChange={e => setArriveDateInput(e.target.value)}
+                  className="h-8 w-48 text-[13px]"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-3 border-t border-gray-200 bg-white sm:justify-end mx-0 mb-0">
+            <Button className="h-8 px-6 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white" onClick={() => {
+              alert('预计到货时间已更新');
+              setEditArriveDateOpen(false);
+            }}>确定</Button>
+            <Button variant="outline" className="h-8 px-6 text-gray-600 bg-white" onClick={() => setEditArriveDateOpen(false)}>取消</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 6 & 7. 采购历史与计划详情 */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-[900px] p-0 gap-0 h-[600px] flex flex-col overflow-hidden bg-white">
+          <div className="flex items-center border-b border-gray-200 pt-2 px-2 bg-gray-50 shrink-0">
+            <div 
+              className={`px-6 py-2 text-[14px] cursor-pointer rounded-t-sm border border-b-0 transition-colors ${historyActiveTab === 'history' ? 'bg-white border-gray-200 -mb-px text-blue-600 relative z-10' : 'border-transparent text-gray-500 hover:text-blue-600'}`}
+              onClick={() => setHistoryActiveTab('history')}
+            >
+              采购历史
+            </div>
+            <div 
+              className={`px-6 py-2 text-[14px] cursor-pointer rounded-t-sm border border-b-0 transition-colors ${historyActiveTab === 'plan' ? 'bg-white border-gray-200 -mb-px text-blue-600 relative z-10' : 'border-transparent text-gray-500 hover:text-blue-600'}`}
+              onClick={() => setHistoryActiveTab('plan')}
+            >
+              采购计划
+            </div>
+          </div>
+          
+          {/* Tab 1 Content: 查看采购历史 */}
+          {historyActiveTab === 'history' && (
+            <div className="flex-1 flex flex-col p-4 overflow-hidden">
+              <div className="flex items-center gap-2 mb-4 shrink-0 text-[13px]">
+                <span className="text-gray-600">供应商:</span>
+                <Input placeholder="请输入供应商名称" className="h-8 w-64 text-[13px]" />
+                <Button className="h-8 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-4">重置</Button>
+              </div>
+              <div className="flex-1 overflow-auto border border-gray-200 rounded-sm">
+                <table className="w-full text-left text-[13px] border-collapse">
+                  <thead className="bg-[#F8F9FA] text-gray-600 sticky top-0 z-10">
+                    <tr>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">采购时间</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">采购单</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">供应商</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">运费(¥)</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">单价(¥)</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">数量(件)</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">总价(¥)</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">入库量</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">损耗量</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center w-32">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    <tr className="hover:bg-gray-50">
+                      <td className="p-3 text-center">2026-04-23 09:19:01</td>
+                      <td className="p-3 text-center text-blue-600 cursor-pointer">1570553252</td>
+                      <td className="p-3 text-center">大连旭笙服创制衣有限公司</td>
+                      <td className="p-3 text-center">--</td>
+                      <td className="p-3 text-center">--</td>
+                      <td className="p-3 text-center">5</td>
+                      <td className="p-3 text-center">--</td>
+                      <td className="p-3 text-center">0</td>
+                      <td className="p-3 text-center">0</td>
+                      <td className="p-3 text-center">
+                        <Button 
+                          size="sm" 
+                          className="h-7 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white text-[12px] px-2 w-full"
+                          onClick={() => alert('已将当前采购单更换为此供应商！(Mock)')}
+                        >
+                          更换为此供应商
+                        </Button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-[13px] text-gray-500 shrink-0">
+                <div className="flex items-center gap-4">
+                  <span>每页显示200条 共1条</span>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" className="h-7 px-3 text-gray-400 bg-gray-50" disabled>首页</Button>
+                    <Button variant="outline" size="sm" className="h-7 px-3 text-gray-400 bg-gray-50" disabled>上一页</Button>
+                    <Button variant="outline" size="sm" className="h-7 px-3 text-gray-400 bg-gray-50" disabled>下一页</Button>
+                    <Button variant="outline" size="sm" className="h-7 px-3 text-gray-400 bg-gray-50" disabled>尾页</Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input className="h-7 w-16 text-center text-[12px]" placeholder="页码" />
+                  <Button variant="outline" size="sm" className="h-7 px-3 text-gray-600 bg-white">跳转</Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2 Content: 计划详情 */}
+          {historyActiveTab === 'plan' && (
+            <div className="flex-1 flex flex-col p-4 overflow-hidden">
+              <div className="flex-1 overflow-auto border border-gray-200 rounded-sm">
+                <table className="w-full text-left text-[13px] border-collapse">
+                  <thead className="bg-[#F8F9FA] text-gray-600 sticky top-0 z-10">
+                    <tr>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">计划号</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">计划来源</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">采购计划仓库</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">数量</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">期望到货时间</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">申请人</th>
+                      <th className="p-3 font-normal border-b border-gray-200 text-center">申请备注</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    <tr className="hover:bg-gray-50">
+                      <td className="p-3 text-center text-blue-600 cursor-pointer hover:underline">PLAN-20260423-001</td>
+                      <td className="p-3 text-center">缺货预警</td>
+                      <td className="p-3 text-center">东莞厚街仓</td>
+                      <td className="p-3 text-center">100</td>
+                      <td className="p-3 text-center">2026-04-25</td>
+                      <td className="p-3 text-center">Yanny</td>
+                      <td className="p-3 text-center text-gray-500">紧急补货</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50">
+                      <td className="p-3 text-center text-blue-600 cursor-pointer hover:underline">PLAN-20260421-042</td>
+                      <td className="p-3 text-center">安全库存</td>
+                      <td className="p-3 text-center">深圳坂田仓</td>
+                      <td className="p-3 text-center">50</td>
+                      <td className="p-3 text-center">2026-04-28</td>
+                      <td className="p-3 text-center">Sys</td>
+                      <td className="p-3 text-center text-gray-500">--</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="p-3 border-t border-gray-200 bg-white shrink-0 sm:justify-end mx-0 mb-0">
+            <Button variant="outline" className="h-8 px-6 text-gray-600 bg-white" onClick={() => setHistoryOpen(false)}>关闭</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+        <div className="text-[12px] text-gray-500 flex items-center gap-4">
+        </div>
+      </div>
+
+      {/* Table Container */}
+      <div className="flex-1 overflow-auto custom-scrollbar">
+        <table className="w-full text-left text-[12px] whitespace-nowrap border-collapse min-w-[1600px]">
+          <thead className="bg-[#F5F6F8] sticky top-0 z-10 shadow-sm">
+            {/* Main Header */}
+            <tr className="border-b border-gray-200 text-gray-600 align-middle">
+              <th className="p-2 w-10 text-center font-normal">
+                <Checkbox 
+                  checked={selectedOrders.length > 0 && selectedOrders.length === orders.length}
+                  onCheckedChange={(c) => handleSelectAll(!!c)}
+                />
+              </th>
+              <th className="p-2 w-auto font-normal">
+                <span className="text-blue-600 cursor-pointer mr-1">⊕ 展开</span> 商品信息
+              </th>
+              <th className="p-2 text-center w-32 font-normal leading-tight">
+                实付<br/>
+                额外费用 <HelpCircle className="w-3 h-3 inline text-gray-400" />
+              </th>
+              <th className="p-2 text-center w-36 font-normal leading-tight">
+                物流信息<br/>
+                发货时间 <HelpCircle className="w-3 h-3 inline text-gray-400" />
+              </th>
+              <th className="p-2 text-center w-36 font-normal leading-tight">
+                下单员<br/>
+                <span className="text-blue-600 flex items-center justify-center">下单时间 <ChevronDown className="w-3 h-3" /></span>
+                付款人<br/>
+                <span className="text-blue-600 flex items-center justify-center">1688付款时间 <ChevronDown className="w-3 h-3" /></span>
+              </th>
+              <th className="p-2 text-center w-40 font-normal leading-tight">
+                采购审核人<br/>
+                <span className="text-blue-600 flex items-center justify-center">审核时间 <ChevronDown className="w-3 h-3" /></span>
+                最后操作员<br/>
+                最后操作时间
+              </th>
+              <th className="p-2 text-center w-24 font-normal">
+                采购员 <HelpCircle className="w-3 h-3 inline text-gray-400" />
+              </th>
+              <th className="p-2 text-center w-72 font-normal">
+                订单备注/关联订单编号
+              </th>
+              <th className="p-2 text-center w-24 font-normal">
+                状态
+              </th>
+              <th className="p-2 text-center w-36 font-normal">
+                操作
+              </th>
+            </tr>
+            {/* Search Filter Row */}
+            <tr className="bg-white border-b border-gray-200">
+              <td className="p-1"></td>
+              <td className="p-1">
+                <Input placeholder="输入采购单号/自定义单号搜索" className="h-7 text-[12px]" />
+              </td>
+              <td className="p-1">
+                <Input placeholder="输入1688订单号搜索" className="h-7 text-[12px]" />
+              </td>
+              <td className="p-1">
+                <Input placeholder="输入库存sku搜索" className="h-7 text-[12px]" />
+              </td>
+              <td className="p-1">
+                <Input placeholder="输入商品名称搜索" className="h-7 text-[12px]" />
+              </td>
+              <td className="p-1">
+                <Input placeholder="输入供应商搜索" className="h-7 text-[12px]" />
+              </td>
+              <td colSpan={4} className="p-1">
+                <div className="flex items-center gap-2">
+                  <Input placeholder="输入快递单号搜索" className="h-7 text-[12px] flex-1" />
+                  <Button variant="outline" size="icon" className="h-7 w-7 text-blue-600"><ChevronsUp className="w-4 h-4" /></Button>
+                </div>
+              </td>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-gray-100">
+            {orders.length === 0 ? (
+              <tr><td colSpan={10} className="p-8 text-center text-gray-500">暂无数据</td></tr>
+            ) : (
+              [...orders].sort((a, b) => {
+                const dateA = a.orderTime ? new Date(a.orderTime).getTime() : 0;
+                const dateB = b.orderTime ? new Date(b.orderTime).getTime() : 0;
+                return dateB - dateA;
+              }).map((order, index) => {
+                // Apply Tab filtering
+                if (activeTab !== '全部') {
+                  const isNewOrder = ['待提交', '待审核', '被驳回'].includes(order.status) || order.status.includes('新订单');
+                  if (activeTab === '新订单' && !isNewOrder) return null;
+                  if (activeTab === '采购中' && order.status !== '采购中') return null;
+                  if (activeTab === '已完成' && order.status !== '已完成') return null;
+                  if (activeTab === '已作废' && order.status !== '已作废') return null;
+                  if (activeTab === '采购审核' && order.status !== '待审核' && order.status !== '新订单（待审核）') return null;
+                }
+
+                // Apply Dynamic Filter Values
+                if (filterValues.searchKeyword) {
+                  const keyword = filterValues.searchKeyword.toLowerCase();
+                  const type = filterValues.searchType || '采购单号';
+                  let matched = false;
+                  if (type === '采购单号' && order.orderNo?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '物流单号' && order.trackingNo?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '1688订单号' && order.platformOrderNo?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '发票号' && order.invoiceNo?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '计划号' && order.planNo?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '订单备注' && order.orderNote?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '签收员' && order.receiver?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '入库员' && order.inbounder?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '供应商' && order.supplierName?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '采购员' && order.buyer?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '下单员' && order.orderCreator?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '库存SKU' && order.sku?.toLowerCase().includes(keyword)) matched = true;
+                  else if (type === '商品名称' && order.productName?.toLowerCase().includes(keyword)) matched = true;
+                  
+                  if (!matched && !order.orderNo?.toLowerCase().includes(keyword)) return null;
+                }
+
+                if (filterValues.paymentStatus && filterValues.paymentStatus !== '全部') {
+                   if (order.paymentStatus !== filterValues.paymentStatus) return null;
+                }
+
+                const isExpanded = expandedRows[order.id];
+                const orderItems = Array.isArray(order.items) ? order.items : [];
+                return (
+                  <React.Fragment key={order.id}>
+                    {/* Order Group Header Row */}
+                    <tr className="bg-[#F5F8FA] border-t border-gray-200">
+                      <td className="p-2 text-center">
+                        <Checkbox 
+                          checked={selectedOrders.includes(order.id)}
+                          onCheckedChange={(c) => handleSelect(!!c, order.id)}
+                        />
+                      </td>
+                      <td colSpan={9} className="p-1.5 px-2">
+                        <div className="flex items-center justify-between text-[12px]">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-blue-600 font-medium">{order.orderNo}</span>
+                            <Copy className="w-3 h-3 text-blue-600 cursor-pointer hover:text-blue-800" />
+                            <span className="text-gray-500">【暂无 <Edit2 className="w-3 h-3 inline text-blue-600 cursor-pointer"/>】</span>
+                            <span className="text-gray-700">
+                              【供应商：<span className="text-blue-600 underline cursor-pointer">{order.supplierName}</span> <Copy className="w-3 h-3 inline text-blue-600 cursor-pointer" />
+                              <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-100 rounded-full ml-1 text-blue-600 text-[10px]">旺</span>
+                              <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-100 rounded-full ml-1 text-blue-600 text-[10px]">缺</span>】
+                            </span>
+                            <span className="bg-cyan-400 text-white px-1.5 py-0.5 rounded text-[11px] cursor-pointer">通知他</span>
+                            {activeTab !== '新订单' && (
+                              <>
+                                <span className="text-gray-700">
+                                  【<span className="text-orange-500 font-medium">1688:</span> <span className="text-blue-600 underline cursor-pointer">3294350294642673956</span> <Copy className="w-3 h-3 inline text-blue-600 cursor-pointer"/>】
+                                </span>
+                                <span className="text-gray-500">[待付款]</span>
+                                <span className="text-gray-500">[帐号:义翰科技]</span>
+                                <span className="text-gray-500">[交易方式:通用担保交易]</span>
+                                <span className="bg-blue-500 text-white px-1.5 py-0.5 rounded text-[11px] cursor-pointer hover:bg-blue-600">立即付款</span>
+                                <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[11px] cursor-pointer hover:bg-red-600">取消关联</span>
+                                <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[11px] cursor-pointer hover:bg-orange-600">装箱状况</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center text-gray-700 ml-4">
+                            <Home className="w-3 h-3 mr-1" /> 西安样品仓(商品开发专用) <Edit2 className="w-3 h-3 ml-1 text-blue-600 cursor-pointer" />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    {/* Order Summary Row */}
+                    <tr className="bg-[#FFFFE5] border-b border-gray-200 text-[12px] align-top">
+                      <td className="p-2 text-center text-gray-700 font-medium">
+                        <div className="flex items-center justify-center">
+                          {index + 1}
+                          <span 
+                            className="text-blue-600 cursor-pointer ml-1 text-[14px]" 
+                            onClick={() => toggleExpand(order.id)}
+                          >
+                            {isExpanded ? '⊖' : '⊕'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex gap-2">
+                          <div className="text-blue-600 cursor-pointer hover:underline whitespace-nowrap mt-0.5">商品详情</div>
+                          <div className="text-gray-600 leading-relaxed text-[11px]">
+                            <div>商品种类： {order.productTypesCount || orderItems.length}</div>
+                            <div>采购/已入/未入数量： {order.totalPurchaseQty || order.totalQuantity || 0}/{order.inboundQty || 0}/{order.unInboundQty || (order.totalPurchaseQty || order.totalQuantity || 0)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-2 text-center border-l border-gray-200">
+                        <div className="font-bold text-[13px] text-gray-800">
+                          {order.actualPayAmount || (order.totalPrice ? order.totalPrice.toFixed(4) : '0.0000')}
+                        </div>
+                        {editingExtraFeeId === order.id ? (
+                          <div className="flex items-center justify-center gap-1 mt-1">
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              min="0"
+                              className="w-16 h-6 text-[11px] text-center px-1" 
+                              value={extraFeeInput}
+                              onChange={(e) => setExtraFeeInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSaveExtraFee(order.id)}
+                              onBlur={() => handleSaveExtraFee(order.id)}
+                              autoFocus
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-blue-600 flex items-center justify-center gap-1 mt-1 group">
+                            {order.extraFee.toFixed(4)} 
+                            <Edit2 
+                              className="w-3 h-3 cursor-pointer opacity-0 group-hover:opacity-100" 
+                              onClick={() => {
+                                setExtraFeeInput(order.extraFee.toFixed(2));
+                                setEditingExtraFeeId(order.id);
+                              }}
+                            />
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2 text-center border-l border-gray-200 leading-relaxed">
+                        <div className="text-blue-600 flex items-center justify-center gap-1 whitespace-nowrap">
+                          [到付] <br/> <span className="cursor-pointer hover:underline flex items-center gap-1" onClick={() => setAddLogisticsId(order.id)}>添加物流单号 <Edit2 className="w-3 h-3 cursor-pointer" /></span>
+                        </div>
+                        <div className="text-gray-500 mt-1">{order.shipTime || '--'}</div>
+                      </td>
+                      <td className="p-2 text-center border-l border-gray-200 text-gray-700 leading-relaxed">
+                        <div className="flex items-center justify-center gap-1">{order.orderCreator} <List className="w-3 h-3 text-blue-600 cursor-pointer" /></div>
+                        <div>{order.orderTime}(UTC+8)</div>
+                        <div>{order.payer || '--'}</div>
+                        <div>{order.payTime1688 || '--'}</div>
+                      </td>
+                      <td className="p-2 text-center border-l border-gray-200 text-gray-700 leading-relaxed">
+                        <div>{order.auditor || '--'}</div>
+                        <div>{order.auditTime || '--'}</div>
+                        <div className="flex items-center justify-center gap-1">{order.lastOperator} <List className="w-3 h-3 text-blue-600 cursor-pointer" /></div>
+                        <div>{order.lastOperateTime}(UTC+8)</div>
+                      </td>
+                      <td className="p-2 text-center border-l border-gray-200 text-gray-700">
+                        {order.buyer || '--'}
+                      </td>
+                      <td className="p-2 border-l border-gray-200">
+                        <div className="flex flex-col gap-1 w-full">
+                          <textarea 
+                            className="w-full h-12 border border-gray-300 rounded p-1 text-[11px] resize-none focus:outline-none focus:border-blue-400" 
+                            defaultValue={order.orderNote || '3294350294642673956*浴巾'}
+                          />
+                          <textarea 
+                            className="w-full h-12 border border-gray-300 rounded p-1 text-[11px] resize-none bg-gray-50 focus:outline-none focus:border-blue-400 focus:bg-white" 
+                            defaultValue={order.relatedOrderNo}
+                          />
+                        </div>
+                      </td>
+                      <td className="p-2 text-left border-l border-gray-200 leading-relaxed text-gray-700">
+                        {['待提交', '待审核', '被驳回'].includes(order.status) || order.status.includes('新订单') ? (
+                          <>
+                            <div>采购状态：{order.status === '待提交' ? '新订单（未提交）' : (order.status === '待审核' ? '新订单（待审核）' : order.status)}</div>
+                            <div>付款状态：{order.paymentStatus === '待申请' ? '待申请付款' : (order.paymentStatus || '待申请付款')}</div>
+                            <div>签收状态：{order.signStatus || '未签收'}</div>
+                            <div>平台状态：{order.platformStatus || '--'}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div>采购状态：{order.status}</div>
+                            <div>付款状态：{order.paymentStatus === '待申请' ? '待申请付款' : (order.paymentStatus === '已申请' ? '已申请付款' : (order.paymentStatus || '已申请付款'))}</div>
+                            <div>签收状态：{order.signStatus || '未签收'}</div>
+                            <div>平台状态：{order.platformStatus || '--'}</div>
+                            <div className="text-blue-600 cursor-pointer hover:underline" onClick={() => setAuditOrderId(order.id)}>审核详情</div>
+                          </>
+                        )}
+                      </td>
+                      <td className="p-2 text-center border-l border-gray-200 leading-relaxed">
+                        {getOperations(order.status, activeTab).map(op => (
+                          <div 
+                            key={op} 
+                            onClick={() => handleOperation(op, order.id)}
+                            className={cn(
+                              "cursor-pointer hover:underline",
+                              ['作废', '申请退货', '驳回'].includes(op) ? "text-red-500" : "text-blue-600"
+                            )}
+                          >
+                            {op}
+                          </div>
+                        ))}
+                        <div 
+                          className="cursor-pointer hover:underline text-blue-600 mt-1"
+                          onClick={() => setOperationLogOpen(true)}
+                        >
+                          操作日志
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Order Item Row (Expanded) */}
+                    {isExpanded && (
+                      <tr className="bg-white border-b border-gray-200 text-[12px] align-top">
+                        <td colSpan={9} className="p-0">
+                          <div className="m-2 border border-gray-200 rounded-sm overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 font-medium">
+                              <tr>
+                                <th className="p-2 w-10 text-center border-r border-gray-100"><Checkbox /></th>
+                                <th className="p-2 w-[300px] border-r border-gray-100">
+                                  <div className="text-center">库存SKU</div>
+                                  <div className="text-center text-gray-400 font-normal">商品名称</div>
+                                </th>
+                                <th className="p-2 w-24 text-center border-r border-gray-100">
+                                  <div>采购数</div>
+                                  <div className="text-gray-400 font-normal">采购单价</div>
+                                </th>
+                                <th className="p-2 w-32 text-center border-r border-gray-100">
+                                  <div>入库量</div>
+                                  <div>损耗量</div>
+                                  <div>退货量</div>
+                                  <div className="text-gray-400 font-normal">异常原因</div>
+                                </th>
+                                <th className="p-2 w-48 text-center border-r border-gray-100">
+                                  <div>库存/在途/未发货量</div>
+                                  <div className="text-gray-400 font-normal">预计到货日期</div>
+                                </th>
+                                <th className="p-2 w-48 text-center border-r border-gray-100">
+                                  <TooltipProvider delay={100}>
+                                    <Tooltip>
+                                      <TooltipTrigger className="flex items-center justify-center gap-1 mx-auto w-full mb-1">
+                                        销量情况 <HelpCircle className="w-3 h-3 text-blue-500" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>分别表示7、28、42天内销量</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <div className="flex items-center justify-center gap-1">订单缺货件数 <HelpCircle className="w-3 h-3 text-blue-500" /></div>
+                                  <div className="text-gray-400 font-normal">订单最早付款时间</div>
+                                </th>
+                                <th className="p-2 w-28 text-center">
+                                  <div>采购/计划详情</div>
+                                  <div className="text-gray-400 font-normal">关联计划数</div>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {orderItems.length === 0 ? (
+                                <tr>
+                                  <td colSpan={7} className="p-8 text-center text-gray-400">暂无商品明细</td>
+                                </tr>
+                              ) : (
+                                orderItems.map((it: any, i: number) => (
+                                  <tr key={it.id || i} className="hover:bg-gray-50">
+                                    <td className="p-2 text-center align-middle border-r border-gray-100"><Checkbox /></td>
+                                    <td className="p-3 border-r border-gray-100">
+                                      <div className="flex gap-3">
+                                        <div className="w-12 h-12 border border-gray-200 rounded flex-shrink-0 flex items-center justify-center bg-gray-50 overflow-hidden">
+                                          {it.image || it.imageUrl ? (
+                                            <img src={it.image || it.imageUrl} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <span className="text-[10px] text-gray-400">No Image</span>
+                                          )}
+                                          <div className="absolute bottom-0 bg-green-500 text-white text-[9px] px-1 w-full text-center truncate">1688</div>
+                                        </div>
+                                        <div className="flex flex-col justify-center">
+                                          <div className="flex items-center gap-1 text-blue-600 mb-1">
+                                            <span className="hover:underline cursor-pointer">{it.sku || '--'}</span>
+                                            <Copy className="w-3 h-3 text-gray-400 cursor-pointer hover:text-blue-600" />
+                                            <span 
+                                              className="text-[11px] border border-blue-200 px-1 rounded-sm flex items-center gap-0.5 cursor-pointer hover:bg-blue-50"
+                                              onClick={() => {
+                                                if (it.productLink) {
+                                                  window.open(it.productLink, '_blank');
+                                                }
+                                              }}
+                                            >
+                                              商品链接 
+                                              <Edit2 
+                                                className="w-2.5 h-2.5" 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setProductLinkInput(it.productLink || '');
+                                                  setEditProductLinkOpen(true);
+                                                }}
+                                              />
+                                            </span>
+                                          </div>
+                                          <div className="text-gray-800 font-medium">{it.name || it.productName || '--'}</div>
+                                          <div className="mt-1">
+                                            <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm">同款降本</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-3 text-center border-r border-gray-100 align-middle">
+                                      <div className="font-medium">{it.quantity || order.totalPurchaseQty}</div>
+                                      <div className="text-orange-500 mt-1">¥ {(it.price || 0).toFixed(2)}</div>
+                                    </td>
+                                    <td className="p-3 text-center border-r border-gray-100 text-gray-600 align-middle">
+                                      <div>--</div>
+                                      <div>--</div>
+                                      <div>--</div>
+                                      <div 
+                                        className="text-blue-600 hover:underline cursor-pointer mt-1"
+                                        onClick={() => {
+                                          setCurrentInboundSku(it.sku || '--');
+                                          setInboundDetailOpen(true);
+                                        }}
+                                      >
+                                        查看入库明细
+                                      </div>
+                                    </td>
+                                    <td className="p-3 text-center border-r border-gray-100 align-middle">
+                                      <TooltipProvider delay={100}>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <span className="cursor-help border-b border-dashed border-gray-400">0/5/1</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>对应库存SKU采购仓库的未发货量 - 库存数量（小于0按0展示）</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <div className="text-blue-600 flex items-center justify-center gap-1 mt-1">
+                                        2026-05-08 
+                                        <Edit2 
+                                          className="w-3 h-3 cursor-pointer" 
+                                          onClick={() => setEditArriveDateOpen(true)}
+                                        />
+                                      </div>
+                                      <div className="text-orange-500 mt-1">还剩14天22时35分</div>
+                                    </td>
+                                    <td className="p-3 text-center border-r border-gray-100 align-middle">
+                                      <div className="text-gray-800 font-medium mb-1">8/38/38</div>
+                                      <div className="text-red-500 font-bold">1</div>
+                                      <div className="text-gray-600 mt-1">2026-04-19 08:08:35</div>
+                                    </td>
+                                    <td className="p-3 text-center align-middle">
+                                      <List 
+                                        className="w-4 h-4 text-blue-600 cursor-pointer mx-auto mb-1" 
+                                        onClick={() => setHistoryOpen(true)}
+                                      />
+                                      <div className="text-blue-600 inline-block pb-0.5 cursor-default">2</div>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Pagination Footer */}
+      <div className="p-3 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0 text-[12px] text-gray-600">
+        <div>共 {orders.length} 条数据</div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span>20条/页</span>
+            <ChevronDown className="w-4 h-4" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-7 w-7" disabled><ChevronDown className="w-4 h-4 rotate-90" /></Button>
+            <span>第 1 页</span>
+            <Button variant="outline" size="icon" className="h-7 w-7" disabled><ChevronDown className="w-4 h-4 -rotate-90" /></Button>
+          </div>
+        </div>
+      </div>
+      {/* 还原确认弹窗 */}
+      <Dialog open={!!restoreOrderId} onOpenChange={() => setRestoreOrderId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-left font-medium text-gray-800">提示</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-gray-700 text-[14px]">
+            确定还原采购单？
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="h-8 px-6 text-gray-600 bg-white" onClick={() => setRestoreOrderId(null)}>取消</Button>
+            <Button className="h-8 px-6 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+              setOrders(orders.map(o => {
+                if (o.id === restoreOrderId) {
+                  return { ...o, status: '新订单（未提交）' };
+                }
+                return o;
+              }));
+              setRestoreOrderId(null);
+            }}>确定</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logistics Dialog */}
+      <Dialog open={!!addLogisticsId} onOpenChange={() => { setAddLogisticsId(null); setLogisticsRows([{ id: 1, fee: '0.00', company: '', no: '' }]); }}>
+        <DialogContent className="max-w-[980px] p-0 gap-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b border-gray-200"><DialogTitle>修改物流信息</DialogTitle></DialogHeader>
+          <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <table className="w-full text-[12px] border text-center">
+              <thead className="bg-gray-50 border-b sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="p-2 font-normal"><span className="text-red-500">*</span>采购单号</th>
+                  <th className="p-2 font-normal"><span className="text-red-500">*</span>运费</th>
+                  <th className="p-2 font-normal"><span className="text-red-500">*</span>物流公司</th>
+                  <th className="p-2 font-normal">签收状态</th>
+                  <th className="p-2 font-normal"><span className="text-red-500">*</span>物流单号</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logisticsRows.map((row, index) => (
+                  <tr key={row.id} className={index > 0 ? "border-t border-gray-100" : ""}>
+                    <td className="p-2">{addLogisticsId && (orders || []).find((o: any) => o.id === addLogisticsId)?.orderNo}</td>
+                    <td className="p-2">
+                      <Input 
+                        className="h-7 text-[12px] w-24 mx-auto" 
+                        value={row.fee} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, fee: val } : r));
+                        }}
+                        onBlur={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 0) {
+                            setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, fee: val.toFixed(2) } : r));
+                          } else {
+                            setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, fee: '0.00' } : r));
+                          }
+                        }}
+                      /> RMB
+                    </td>
+                    <td className="p-2">
+                      <select 
+                        className="border p-1 rounded w-28"
+                        value={row.company}
+                        onChange={(e) => setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, company: e.target.value } : r))}
+                      >
+                        <option value="">请选择</option>
+                        <option value="顺丰速运">顺丰速运</option>
+                        <option value="中通快递">中通快递</option>
+                        <option value="圆通速递">圆通速递</option>
+                        <option value="韵达速递">韵达速递</option>
+                      </select>
+                    </td>
+                    <td className="p-2">未签收</td>
+                    <td className="p-2 flex items-center justify-center gap-1">
+                      <Input 
+                        className="h-7 text-[12px] w-48" 
+                        value={row.no}
+                        onChange={(e) => setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, no: e.target.value } : r))}
+                      />
+                      {index === logisticsRows.length - 1 && (
+                        <Button 
+                          size="icon" 
+                          variant="outline" 
+                          className="h-6 w-6" 
+                          onClick={() => setLogisticsRows(prev => [...prev, { id: Date.now(), fee: '0.00', company: '', no: '' }])}
+                        >
+                          +
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 flex justify-end gap-2 border-t pt-4 p-4 bg-gray-50/50">
+            <Button variant="outline" onClick={() => { setAddLogisticsId(null); setLogisticsRows([{ id: 1, fee: '0.00', company: '', no: '' }]); }}>取消</Button>
+            <Button className="bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white" onClick={() => {
+              const isValid = logisticsRows.every(r => r.fee && r.company && r.no);
+              if (!isValid) {
+                alert('请填写所有必填信息（运费、物流公司、物流单号）');
+                return;
+              }
+              setOrders((prev: any[]) => prev.map(o => {
+                if (o.id === addLogisticsId) {
+                  const existing = o.logistics || [];
+                  return { ...o, logistics: [...existing, ...logisticsRows] };
+                }
+                return o;
+              }));
+              setAddLogisticsId(null);
+              setLogisticsRows([{ id: 1, fee: '0.00', company: '', no: '' }]);
+            }}>确定</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 审核详情 Dialog */}
+      <Dialog open={!!auditOrderId} onOpenChange={() => setAuditOrderId(null)}>
+        <DialogContent className="w-auto min-w-[700px] max-w-[calc(100vw-2rem)] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="text-left font-semibold text-base text-gray-800">审批详情</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="purchase" className="w-full flex flex-col overflow-hidden px-4 pt-4">
+            <TabsList className="flex w-fit shrink-0 justify-start h-9 bg-transparent p-0">
+              <TabsTrigger 
+                value="purchase" 
+                className="h-full rounded-t-xl rounded-b-none border border-b-0 border-gray-200 bg-white data-[state=active]:bg-[#03A9F4] data-[state=active]:text-white data-[state=active]:border-[#03A9F4] data-[state=active]:shadow-none px-6 font-normal"
+              >
+                采购审批详情
+              </TabsTrigger>
+              <TabsTrigger 
+                value="payment" 
+                className="h-full rounded-t-xl rounded-b-none border border-b-0 border-l-0 border-gray-200 bg-white data-[state=active]:bg-[#03A9F4] data-[state=active]:text-white data-[state=active]:border-[#03A9F4] data-[state=active]:border-l data-[state=active]:shadow-none px-6 font-normal -ml-[1px]"
+              >
+                付款审批详情
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="purchase" className="flex-1 m-0 outline-none pb-4">
+              <table className="w-full text-sm border border-gray-100 text-center">
+                <thead className="bg-[#F5F5F5] sticky top-0 z-10">
+                  <tr>
+                    <th className="p-3 font-medium whitespace-nowrap w-40 text-gray-800">审核时间</th>
+                    <th className="p-3 font-medium text-left whitespace-nowrap min-w-[400px] text-gray-800">审核描述</th>
+                    <th className="p-3 font-medium whitespace-nowrap w-40 text-gray-800">审核备注</th>
+                    <th className="p-3 font-medium whitespace-nowrap w-32 text-gray-800">审核人</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-gray-100">
+                    <td className="p-4 text-gray-600 whitespace-nowrap align-middle">2026-04-17<br/>17:56:00</td>
+                    <td className="p-4 text-left align-middle leading-relaxed text-gray-600 line-clamp-2" title="自动提交采购;所属采购仓库:东莞厚街库;采购单金额范围100-;符合规则【采购审批规则】进入待审核;待审核人:王朋,">
+                      自动提交采购;所属采购仓库:东莞厚街库;采购单金额范围<br/>100-;符合规则【采购审批规则】进入待审核;待审核<br/>人:王朋,
+                    </td>
+                    <td className="p-4 align-middle text-gray-600"></td>
+                    <td className="p-4 align-middle text-gray-600">刘甜</td>
+                  </tr>
+                  <tr className="border-t border-gray-100">
+                    <td className="p-4 text-gray-600 whitespace-nowrap align-middle">2026-04-17<br/>18:02:00</td>
+                    <td className="p-4 text-left align-middle text-gray-600">审核通过</td>
+                    <td className="p-4 align-middle text-gray-600"></td>
+                    <td className="p-4 align-middle text-gray-600">peng</td>
+                  </tr>
+                </tbody>
+              </table>
+            </TabsContent>
+            <TabsContent value="payment" className="flex-1 m-0 outline-none pb-4">
+              <table className="w-full text-sm border border-gray-100 text-center">
+                <thead className="bg-[#F5F5F5] sticky top-0 z-10">
+                  <tr>
+                    <th className="p-3 font-medium text-left whitespace-nowrap text-gray-800">付款单号</th>
+                    <th className="p-3 font-medium text-left whitespace-nowrap text-gray-800">最后审核时间</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-800">审核人</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="p-8 text-gray-600" colSpan={3}>暂无数据</td>
+                  </tr>
+                </tbody>
+              </table>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* 拆分采购单 */}
+      <Dialog open={!!splitOrderId} onOpenChange={() => { setSplitOrderId(null); setSplitSelections({}); setSplitQuantities({}); }}>
+        <DialogContent className="max-w-[900px] p-0 gap-0 overflow-hidden h-[80vh] flex flex-col">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="text-left font-semibold text-base text-gray-800">拆分采购单</DialogTitle>
+          </DialogHeader>
+          <div className="py-3 px-4 text-sm text-gray-600">
+            采购单：{splitOrderId && (orders || []).find((o: any) => o.id === splitOrderId)?.orderNo}
+          </div>
+          <div className="px-4 pb-4 flex-1">
+            <table className="w-full text-sm border border-gray-100 text-center">
+              <thead className="bg-[#F5F5F5] sticky top-0 z-10">
+                <tr>
+                  <th className="p-3 font-medium whitespace-nowrap w-20 text-gray-800">缩略图</th>
+                  <th className="p-3 font-medium text-left whitespace-nowrap text-gray-800">SKU编号/名称</th>
+                  <th className="p-3 font-medium whitespace-nowrap text-gray-800">原厂SKU</th>
+                  <th className="p-3 font-medium whitespace-nowrap text-gray-800">采购价</th>
+                  <th className="p-3 font-medium whitespace-nowrap w-20 text-gray-800">数量</th>
+                  <th className="p-3 font-medium w-32 whitespace-nowrap text-gray-800">拆分数量</th>
+                </tr>
+              </thead>
+              <tbody>
+                {splitOrderId && (orders || []).find((o: any) => o.id === splitOrderId)?.items?.map((item: any, index: number) => (
+                  <tr key={index} className="border-t border-gray-100">
+                    <td className="p-3 flex justify-center">
+                      <img src={item.imageUrl || "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=product+thumbnail&image_size=square"} alt="thumb" className="w-12 h-12 object-cover border border-gray-200" />
+                    </td>
+                    <td className="p-3 text-left">
+                      <div className="text-[#03A9F4]">{item.sku || '10000011-WH-A0-ET_TQET_TQ'}</div>
+                      <div className="text-gray-600 text-[12px] mt-1">{item.name || item.productName || '陶瓷花瓶_白色小号_底径9.5cm 高度14.5cm 口径8cm'}</div>
+                    </td>
+                    <td className="p-3"></td>
+                    <td className="p-3 text-gray-600">{Number(item.price || 10).toFixed(2)}</td>
+                    <td className="p-3 text-gray-600">{item.quantity}</td>
+                    <td className="p-3">
+                      <Input 
+                        type="number"
+                        min="1"
+                        max={item.quantity - 1}
+                        value={splitQuantities[index] || ''}
+                        onChange={(e) => {
+                          let val = parseInt(e.target.value);
+                          if (val > item.quantity - 1) val = item.quantity - 1;
+                          if (val < 1) val = 1;
+                          setSplitQuantities(prev => ({ ...prev, [index]: val }));
+                          if (!isNaN(val)) {
+                            setSplitSelections(prev => ({ ...prev, [index]: true }));
+                          } else {
+                            setSplitSelections(prev => ({ ...prev, [index]: false }));
+                          }
+                        }}
+                        className="w-24 mx-auto text-center h-8 rounded-sm focus-visible:ring-1 focus-visible:ring-[#03A9F4]"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 border-t flex justify-end gap-3">
+            <Button variant="outline" className="px-6 border-gray-200 hover:bg-gray-50 text-gray-600 font-normal" onClick={() => { setSplitOrderId(null); setSplitSelections({}); setSplitQuantities({}); }}>取消</Button>
+            <Button className="bg-[#03A9F4] hover:bg-[#039BE5] text-white px-6 font-normal" onClick={() => {
+              const originalOrder = (orders || []).find((o: any) => o.id === splitOrderId);
+              if (!originalOrder) return;
+              
+              const itemsToSplit = Object.entries(splitSelections)
+                .filter(([_, isSelected]) => isSelected)
+                .map(([indexStr]) => {
+                  const idx = parseInt(indexStr);
+                  const qty = splitQuantities[idx] || 1;
+                  return { originalIndex: idx, splitQty: qty, item: originalOrder.items[idx] };
+                });
+
+              if (itemsToSplit.length === 0) {
+                alert('请至少在一条数据内填写拆分数量');
+                return;
+              }
+
+              const newOrderNo = 'PO' + Date.now();
+              const newOrderItems = itemsToSplit.map(s => ({
+                ...s.item,
+                quantity: s.splitQty,
+                totalAmount: s.splitQty * (s.item.price || 0)
+              }));
+
+              const newOrder = {
+                ...originalOrder,
+                id: Date.now().toString(),
+                orderNo: newOrderNo,
+                items: newOrderItems,
+                totalQuantity: newOrderItems.reduce((acc, cur) => acc + cur.quantity, 0),
+                totalPrice: newOrderItems.reduce((acc, cur) => acc + cur.totalAmount, 0),
+                remark: `从采购单【${originalOrder.orderNo}】拆分成新采购单`,
+                status: '新订单（未提交）',
+                createdAt: new Date().toISOString()
+              };
+
+              const updatedOriginalItems = [...originalOrder.items];
+              itemsToSplit.forEach(s => {
+                updatedOriginalItems[s.originalIndex] = {
+                  ...updatedOriginalItems[s.originalIndex],
+                  quantity: updatedOriginalItems[s.originalIndex].quantity - s.splitQty,
+                  totalAmount: (updatedOriginalItems[s.originalIndex].quantity - s.splitQty) * (updatedOriginalItems[s.originalIndex].price || 0)
+                };
+              });
+              
+              setOrders((prev: any[]) => {
+                const next = prev.map(o => {
+                  if (o.id === originalOrder.id) {
+                    return {
+                      ...o,
+                      items: updatedOriginalItems,
+                      totalQuantity: updatedOriginalItems.reduce((acc, cur) => acc + cur.quantity, 0),
+                      totalPrice: updatedOriginalItems.reduce((acc, cur) => acc + cur.totalAmount, 0),
+                      remark: `拆分出新采购单【${newOrderNo}】` + (o.remark ? `\n${o.remark}` : '')
+                    };
+                  }
+                  return o;
+                });
+                return [newOrder, ...next];
+              });
+              
+              setToastMessage('拆分成功');
+              setTimeout(() => setToastMessage(null), 2000);
+              setSplitOrderId(null);
+              setSplitSelections({});
+              setSplitQuantities({});
+            }}>确认</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 批量调整商品数量嵌套弹框 */}
+      <Dialog open={batchAdjustOpen} onOpenChange={setBatchAdjustOpen}>
+        <DialogContent className="w-[600px] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="text-left font-normal text-[15px] text-gray-800">批量调整商品数量</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 bg-gray-50/50 flex flex-col items-center justify-center gap-3">
+            <div className="w-full max-w-[500px] flex flex-col gap-2">
+              <div className="text-gray-600 text-center whitespace-nowrap text-sm">
+                每行一个 <span className="text-blue-600 font-medium">库存SKU, 数量</span> （支持excel复制粘贴）
+              </div>
+              <textarea 
+                className="w-full h-48 border border-gray-200 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none bg-white"
+                value={batchAdjustText}
+                onChange={(e) => setBatchAdjustText(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="p-4 border-t flex justify-end gap-3 bg-white">
+            <Button 
+              className="bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-6 font-normal" 
+              onClick={() => {
+                if (!batchAdjustText.trim()) {
+                  setBatchAdjustOpen(false);
+                  return;
+                }
+                
+                const lines = batchAdjustText.split('\n').map(l => l.trim()).filter(Boolean);
+                const updates = new Map<string, number>();
+                
+                lines.forEach(line => {
+                  const parts = line.split(/[\t,]/).map(p => p.trim());
+                  if (parts.length >= 2) {
+                    const sku = parts[0];
+                    const qty = parseInt(parts[1]);
+                    if (sku && !isNaN(qty) && qty > 0) {
+                      updates.set(sku, qty);
+                    }
+                  }
+                });
+
+                if (updates.size > 0) {
+                  const newItems = editItemsData.map(item => {
+                    if (updates.has(item.sku)) {
+                      return { ...item, editQuantity: updates.get(item.sku) };
+                    }
+                    return item;
+                  });
+                  setEditItemsData(newItems);
+                  setToastMessage(`成功匹配并调整了 ${updates.size} 条商品的数量`);
+                  setTimeout(() => setToastMessage(null), 2000);
+                }
+                
+                setBatchAdjustText("");
+                setBatchAdjustOpen(false);
+              }}
+            >
+              确定
+            </Button>
+            <Button variant="outline" className="px-6 border-gray-200 hover:bg-gray-50 text-gray-600 font-normal" onClick={() => {
+              setBatchAdjustText("");
+              setBatchAdjustOpen(false);
+            }}>
+              取消
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 编辑采购单 Dialog */}
+      <Dialog open={!!editOrderId} onOpenChange={() => setEditOrderId(null)}>
+        <DialogContent className="w-auto min-w-[1200px] max-w-[calc(100vw-2rem)] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="text-left font-normal text-[15px] text-gray-800">
+              采购商品详情 <span className="text-gray-500 text-sm ml-1">(采购单：{editOrderId && (orders || []).find((o: any) => o.id === editOrderId)?.orderNo} 采购状态：{editOrderId && (orders || []).find((o: any) => o.id === editOrderId)?.status.replace('（未提交）', '')} 付款状态：{editOrderId && (orders || []).find((o: any) => o.id === editOrderId)?.paymentStatus} 币种：RMB)</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+            {/* Search/Filter Area */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-gray-600 font-medium whitespace-nowrap">搜索类型</span>
+                <div className="flex items-center gap-4 text-gray-600">
+                  <span className="text-blue-600 border-b-2 border-blue-600 pb-1 cursor-pointer">库存SKU</span>
+                  <span className="cursor-pointer pb-1">库存SKU名称</span>
+                  <span className="cursor-pointer pb-1">原厂sku</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-gray-600 font-medium whitespace-nowrap">搜索内容</span>
+                <div className="flex items-center max-w-[400px] w-full">
+                  <Input placeholder="请输入关键字" className="rounded-r-none h-8 text-sm focus-visible:ring-0 border-r-0" />
+                  <Button className="h-8 rounded-l-none bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-4 gap-1">
+                    <Search className="w-4 h-4" /> 搜索
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Button className="h-8 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-4 text-sm font-normal" onClick={() => setBatchAdjustOpen(true)}>批量调整商品数量</Button>
+              </div>
+            </div>
+
+            {/* Table Area */}
+            <div className="border border-gray-100 mt-2">
+              <table className="w-full text-sm text-center">
+                <thead className="bg-[#F5F5F5] sticky top-0 z-10 border-b border-gray-100">
+                  <tr>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">缩略图</th>
+                    <th className="p-3 font-medium text-left whitespace-nowrap text-gray-700">库存SKU/商品名称</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">采购数量</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">已入库/损耗量</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">
+                      <div className="flex items-center justify-center gap-1 group relative">
+                        数量调整 
+                        <HelpCircle className="w-3.5 h-3.5 text-blue-600 cursor-help" />
+                        <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-800 text-white text-[12px] rounded shadow-lg z-50 whitespace-normal text-left font-normal">
+                          数量调整不能低于已入库量；数量调整为0，即在采购单中删除该商品
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                        </div>
+                      </div>
+                    </th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">上次采购价<br/>最低采购价</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">单价</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">含税单价</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">折扣</th>
+                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">小计</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editItemsData.map((item, index) => (
+                    <tr key={index} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50">
+                      <td className="p-3 flex justify-center">
+                        <img src={item.imageUrl || "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=product+thumbnail&image_size=square"} alt="thumb" className="w-12 h-12 object-cover border border-gray-200" />
+      {/* 8. 操作日志 */}
+      <Dialog open={operationLogOpen} onOpenChange={setOperationLogOpen}>
+        <DialogContent className="max-w-[800px] p-0 gap-0 h-[60vh] flex flex-col bg-white">
+          <DialogHeader className="p-3 border-b border-gray-200 shrink-0">
+            <DialogTitle className="text-[14px] font-normal text-gray-800">操作日志</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-0 custom-scrollbar">
+            <table className="w-full text-left text-[12px] border-collapse">
+              <thead className="sticky top-0 bg-white shadow-sm">
+                <tr className="text-gray-500 border-b border-gray-200">
+                  <th className="p-3 font-normal w-40 text-center">操作时间</th>
+                  <th className="p-3 font-normal">操作描述</th>
+                  <th className="p-3 font-normal w-24 text-center">操作人</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                <tr className="hover:bg-gray-50">
+                  <td className="p-3 text-center text-gray-600 align-middle">
+                    2026-04-21 16:06
+                  </td>
+                  <td className="p-3 text-gray-800 align-middle">
+                    修改商品54314625-BK-AXL-CGaA原单价24.0000修改为23.0000
+                  </td>
+                  <td className="p-3 text-center text-gray-600 align-middle">Yanny</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="p-3 text-center text-gray-600 align-middle">
+                    2026-04-21 15:59
+                  </td>
+                  <td className="p-3 text-gray-800 align-middle">
+                    采购单下商品【10003066-0-A2XL-GY】，上次采购价设置为**
+                  </td>
+                  <td className="p-3 text-center text-gray-600 align-middle">sys</td>
+                </tr>
+                <tr className="hover:bg-gray-50">
+                  <td className="p-3 text-center text-gray-600 align-middle">
+                    2026-04-21 15:59
+                  </td>
+                  <td className="p-3 text-gray-800 align-middle">
+                    手工生成采购单;采购单收货仓库:东莞厚街仓;采购单供货商名称:龙港市康梦塑料制品厂
+                  </td>
+                  <td className="p-3 text-center text-gray-600 align-middle">Yanny</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter className="p-3 border-t border-gray-200 shrink-0 bg-white sm:justify-end mx-0 mb-0">
+            <Button variant="outline" className="h-8 px-6 text-gray-600 bg-white" onClick={() => setOperationLogOpen(false)}>关闭</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

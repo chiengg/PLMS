@@ -1,0 +1,880 @@
+--- src/pages/PurchaseManagement/components/ManagementTable.tsx
++++ src/pages/PurchaseManagement/components/ManagementTable.tsx
+@@ -1100,2 +1100,432 @@
+       </Dialog>
+ 
++      {/* Logistics Dialog */}
++      <Dialog open={!!addLogisticsId} onOpenChange={() => { setAddLogisticsId(null); setLogisticsRows([{ id: 1, fee: '0.00', company: '', no: '' }]); }}>
++        <DialogContent className="max-w-[980px] p-0 gap-0 overflow-hidden">
++          <DialogHeader className="p-4 border-b border-gray-200"><DialogTitle>修改物流信息</DialogTitle></DialogHeader>
++          <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
++            <table className="w-full text-[12px] border text-center">
++              <thead className="bg-gray-50 border-b sticky top-0 z-10 shadow-sm">
++                <tr>
++                  <th className="p-2 font-normal"><span className="text-red-500">*</span>采购单号</th>
++                  <th className="p-2 font-normal"><span className="text-red-500">*</span>运费</th>
++                  <th className="p-2 font-normal"><span className="text-red-500">*</span>物流公司</th>
++                  <th className="p-2 font-normal">签收状态</th>
++                  <th className="p-2 font-normal"><span className="text-red-500">*</span>物流单号</th>
++                </tr>
++              </thead>
++              <tbody>
++                {logisticsRows.map((row, index) => (
++                  <tr key={row.id} className={index > 0 ? "border-t border-gray-100" : ""}>
++                    <td className="p-2">{addLogisticsId && (orders || []).find((o: any) => o.id === addLogisticsId)?.orderNo}</td>
++                    <td className="p-2">
++                      <Input 
++                        className="h-7 text-[12px] w-24 mx-auto" 
++                        value={row.fee} 
++                        onChange={(e) => {
++                          const val = e.target.value;
++                          setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, fee: val } : r));
++                        }}
++                        onBlur={(e) => {
++                          const val = parseFloat(e.target.value);
++                          if (!isNaN(val) && val >= 0) {
++                            setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, fee: val.toFixed(2) } : r));
++                          } else {
++                            setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, fee: '0.00' } : r));
++                          }
++                        }}
++                      /> RMB
++                    </td>
++                    <td className="p-2">
++                      <select 
++                        className="border p-1 rounded w-28"
++                        value={row.company}
++                        onChange={(e) => setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, company: e.target.value } : r))}
++                      >
++                        <option value="">请选择</option>
++                        <option value="顺丰速运">顺丰速运</option>
++                        <option value="中通快递">中通快递</option>
++                        <option value="圆通速递">圆通速递</option>
++                        <option value="韵达速递">韵达速递</option>
++                      </select>
++                    </td>
++                    <td className="p-2">未签收</td>
++                    <td className="p-2 flex items-center justify-center gap-1">
++                      <Input 
++                        className="h-7 text-[12px] w-48" 
++                        value={row.no}
++                        onChange={(e) => setLogisticsRows(prev => prev.map((r, i) => i === index ? { ...r, no: e.target.value } : r))}
++                      />
++                      {index === logisticsRows.length - 1 && (
++                        <Button 
++                          size="icon" 
++                          variant="outline" 
++                          className="h-6 w-6" 
++                          onClick={() => setLogisticsRows(prev => [...prev, { id: Date.now(), fee: '0.00', company: '', no: '' }])}
++                        >
++                          +
++                        </Button>
++                      )}
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++          <div className="mt-4 flex justify-end gap-2 border-t pt-4 p-4 bg-gray-50/50">
++            <Button variant="outline" onClick={() => { setAddLogisticsId(null); setLogisticsRows([{ id: 1, fee: '0.00', company: '', no: '' }]); }}>取消</Button>
++            <Button className="bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white" onClick={() => {
++              const isValid = logisticsRows.every(r => r.fee && r.company && r.no);
++              if (!isValid) {
++                alert('请填写所有必填信息（运费、物流公司、物流单号）');
++                return;
++              }
++              setOrders((prev: any[]) => prev.map(o => {
++                if (o.id === addLogisticsId) {
++                  const existing = o.logistics || [];
++                  return { ...o, logistics: [...existing, ...logisticsRows] };
++                }
++                return o;
++              }));
++              setAddLogisticsId(null);
++              setLogisticsRows([{ id: 1, fee: '0.00', company: '', no: '' }]);
++            }}>确定</Button>
++          </div>
++        </DialogContent>
++      </Dialog>
++
++      {/* 审核详情 Dialog */}
++      <Dialog open={!!auditOrderId} onOpenChange={() => setAuditOrderId(null)}>
++        <DialogContent className="w-auto min-w-[700px] max-w-[calc(100vw-2rem)] flex flex-col p-0 gap-0">
++          <DialogHeader className="p-4 border-b">
++            <DialogTitle className="text-left font-semibold text-base text-gray-800">审批详情</DialogTitle>
++          </DialogHeader>
++          <Tabs defaultValue="purchase" className="w-full flex flex-col overflow-hidden px-4 pt-4">
++            <TabsList className="flex w-fit shrink-0 justify-start h-9 bg-transparent p-0">
++              <TabsTrigger 
++                value="purchase" 
++                className="h-full rounded-t-xl rounded-b-none border border-b-0 border-gray-200 bg-white data-[state=active]:bg-[#03A9F4] data-[state=active]:text-white data-[state=active]:border-[#03A9F4] data-[state=active]:shadow-none px-6 font-normal"
++              >
++                采购审批详情
++              </TabsTrigger>
++              <TabsTrigger 
++                value="payment" 
++                className="h-full rounded-t-xl rounded-b-none border border-b-0 border-l-0 border-gray-200 bg-white data-[state=active]:bg-[#03A9F4] data-[state=active]:text-white data-[state=active]:border-[#03A9F4] data-[state=active]:border-l data-[state=active]:shadow-none px-6 font-normal -ml-[1px]"
++              >
++                付款审批详情
++              </TabsTrigger>
++            </TabsList>
++            <TabsContent value="purchase" className="flex-1 m-0 outline-none pb-4">
++              <table className="w-full text-sm border border-gray-100 text-center">
++                <thead className="bg-[#F5F5F5] sticky top-0 z-10">
++                  <tr>
++                    <th className="p-3 font-medium whitespace-nowrap w-40 text-gray-800">审核时间</th>
++                    <th className="p-3 font-medium text-left whitespace-nowrap min-w-[400px] text-gray-800">审核描述</th>
++                    <th className="p-3 font-medium whitespace-nowrap w-40 text-gray-800">审核备注</th>
++                    <th className="p-3 font-medium whitespace-nowrap w-32 text-gray-800">审核人</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  <tr className="border-t border-gray-100">
++                    <td className="p-4 text-gray-600 whitespace-nowrap align-middle">2026-04-17<br/>17:56:00</td>
++                    <td className="p-4 text-left align-middle leading-relaxed text-gray-600 line-clamp-2" title="自动提交采购;所属采购仓库:东莞厚街库;采购单金额范围100-;符合规则【采购审批规则】进入待审核;待审核人:王朋,">
++                      自动提交采购;所属采购仓库:东莞厚街库;采购单金额范围<br/>100-;符合规则【采购审批规则】进入待审核;待审核<br/>人:王朋,
++                    </td>
++                    <td className="p-4 align-middle text-gray-600"></td>
++                    <td className="p-4 align-middle text-gray-600">刘甜</td>
++                  </tr>
++                  <tr className="border-t border-gray-100">
++                    <td className="p-4 text-gray-600 whitespace-nowrap align-middle">2026-04-17<br/>18:02:00</td>
++                    <td className="p-4 text-left align-middle text-gray-600">审核通过</td>
++                    <td className="p-4 align-middle text-gray-600"></td>
++                    <td className="p-4 align-middle text-gray-600">peng</td>
++                  </tr>
++                </tbody>
++              </table>
++            </TabsContent>
++            <TabsContent value="payment" className="flex-1 m-0 outline-none pb-4">
++              <table className="w-full text-sm border border-gray-100 text-center">
++                <thead className="bg-[#F5F5F5] sticky top-0 z-10">
++                  <tr>
++                    <th className="p-3 font-medium text-left whitespace-nowrap text-gray-800">付款单号</th>
++                    <th className="p-3 font-medium text-left whitespace-nowrap text-gray-800">最后审核时间</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-800">审核人</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  <tr>
++                    <td className="p-8 text-gray-600" colSpan={3}>暂无数据</td>
++                  </tr>
++                </tbody>
++              </table>
++            </TabsContent>
++          </Tabs>
++        </DialogContent>
++      </Dialog>
++
++      {/* 拆分采购单 */}
++      <Dialog open={!!splitOrderId} onOpenChange={() => { setSplitOrderId(null); setSplitSelections({}); setSplitQuantities({}); }}>
++        <DialogContent className="max-w-[900px] p-0 gap-0 overflow-hidden h-[80vh] flex flex-col">
++          <DialogHeader className="p-4 border-b">
++            <DialogTitle className="text-left font-semibold text-base text-gray-800">拆分采购单</DialogTitle>
++          </DialogHeader>
++          <div className="py-3 px-4 text-sm text-gray-600">
++            采购单：{splitOrderId && (orders || []).find((o: any) => o.id === splitOrderId)?.orderNo}
++          </div>
++          <div className="px-4 pb-4 flex-1">
++            <table className="w-full text-sm border border-gray-100 text-center">
++              <thead className="bg-[#F5F5F5] sticky top-0 z-10">
++                <tr>
++                  <th className="p-3 font-medium whitespace-nowrap w-20 text-gray-800">缩略图</th>
++                  <th className="p-3 font-medium text-left whitespace-nowrap text-gray-800">SKU编号/名称</th>
++                  <th className="p-3 font-medium whitespace-nowrap text-gray-800">原厂SKU</th>
++                  <th className="p-3 font-medium whitespace-nowrap text-gray-800">采购价</th>
++                  <th className="p-3 font-medium whitespace-nowrap w-20 text-gray-800">数量</th>
++                  <th className="p-3 font-medium w-32 whitespace-nowrap text-gray-800">拆分数量</th>
++                </tr>
++              </thead>
++              <tbody>
++                {splitOrderId && (orders || []).find((o: any) => o.id === splitOrderId)?.items?.map((item: any, index: number) => (
++                  <tr key={index} className="border-t border-gray-100">
++                    <td className="p-3 flex justify-center">
++                      <img src={item.imageUrl || "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=product+thumbnail&image_size=square"} alt="thumb" className="w-12 h-12 object-cover border border-gray-200" />
++                    </td>
++                    <td className="p-3 text-left">
++                      <div className="text-[#03A9F4]">{item.sku || '10000011-WH-A0-ET_TQET_TQ'}</div>
++                      <div className="text-gray-600 text-[12px] mt-1">{item.name || item.productName || '陶瓷花瓶_白色小号_底径9.5cm 高度14.5cm 口径8cm'}</div>
++                    </td>
++                    <td className="p-3"></td>
++                    <td className="p-3 text-gray-600">{Number(item.price || 10).toFixed(2)}</td>
++                    <td className="p-3 text-gray-600">{item.quantity}</td>
++                    <td className="p-3">
++                      <Input 
++                        type="number"
++                        min="1"
++                        max={item.quantity - 1}
++                        value={splitQuantities[index] || ''}
++                        onChange={(e) => {
++                          let val = parseInt(e.target.value);
++                          if (val > item.quantity - 1) val = item.quantity - 1;
++                          if (val < 1) val = 1;
++                          setSplitQuantities(prev => ({ ...prev, [index]: val }));
++                          if (!isNaN(val)) {
++                            setSplitSelections(prev => ({ ...prev, [index]: true }));
++                          } else {
++                            setSplitSelections(prev => ({ ...prev, [index]: false }));
++                          }
++                        }}
++                        className="w-24 mx-auto text-center h-8 rounded-sm focus-visible:ring-1 focus-visible:ring-[#03A9F4]"
++                      />
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++          <div className="p-4 border-t flex justify-end gap-3">
++            <Button variant="outline" className="px-6 border-gray-200 hover:bg-gray-50 text-gray-600 font-normal" onClick={() => { setSplitOrderId(null); setSplitSelections({}); setSplitQuantities({}); }}>取消</Button>
++            <Button className="bg-[#03A9F4] hover:bg-[#039BE5] text-white px-6 font-normal" onClick={() => {
++              const originalOrder = (orders || []).find((o: any) => o.id === splitOrderId);
++              if (!originalOrder) return;
++              
++              const itemsToSplit = Object.entries(splitSelections)
++                .filter(([_, isSelected]) => isSelected)
++                .map(([indexStr]) => {
++                  const idx = parseInt(indexStr);
++                  const qty = splitQuantities[idx] || 1;
++                  return { originalIndex: idx, splitQty: qty, item: originalOrder.items[idx] };
++                });
++
++              if (itemsToSplit.length === 0) {
++                alert('请至少在一条数据内填写拆分数量');
++                return;
++              }
++
++              const newOrderNo = 'PO' + Date.now();
++              const newOrderItems = itemsToSplit.map(s => ({
++                ...s.item,
++                quantity: s.splitQty,
++                totalAmount: s.splitQty * (s.item.price || 0)
++              }));
++
++              const newOrder = {
++                ...originalOrder,
++                id: Date.now().toString(),
++                orderNo: newOrderNo,
++                items: newOrderItems,
++                totalQuantity: newOrderItems.reduce((acc, cur) => acc + cur.quantity, 0),
++                totalPrice: newOrderItems.reduce((acc, cur) => acc + cur.totalAmount, 0),
++                remark: `从采购单【${originalOrder.orderNo}】拆分成新采购单`,
++                status: '新订单（未提交）',
++                createdAt: new Date().toISOString()
++              };
++
++              const updatedOriginalItems = [...originalOrder.items];
++              itemsToSplit.forEach(s => {
++                updatedOriginalItems[s.originalIndex] = {
++                  ...updatedOriginalItems[s.originalIndex],
++                  quantity: updatedOriginalItems[s.originalIndex].quantity - s.splitQty,
++                  totalAmount: (updatedOriginalItems[s.originalIndex].quantity - s.splitQty) * (updatedOriginalItems[s.originalIndex].price || 0)
++                };
++              });
++              
++              setOrders((prev: any[]) => {
++                const next = prev.map(o => {
++                  if (o.id === originalOrder.id) {
++                    return {
++                      ...o,
++                      items: updatedOriginalItems,
++                      totalQuantity: updatedOriginalItems.reduce((acc, cur) => acc + cur.quantity, 0),
++                      totalPrice: updatedOriginalItems.reduce((acc, cur) => acc + cur.totalAmount, 0),
++                      remark: `拆分出新采购单【${newOrderNo}】` + (o.remark ? `\n${o.remark}` : '')
++                    };
++                  }
++                  return o;
++                });
++                return [newOrder, ...next];
++              });
++              
++              setToastMessage('拆分成功');
++              setTimeout(() => setToastMessage(null), 2000);
++              setSplitOrderId(null);
++              setSplitSelections({});
++              setSplitQuantities({});
++            }}>确认</Button>
++          </div>
++        </DialogContent>
++      </Dialog>
++
++      {/* 批量调整商品数量嵌套弹框 */}
++      <Dialog open={batchAdjustOpen} onOpenChange={setBatchAdjustOpen}>
++        <DialogContent className="w-[600px] flex flex-col p-0 gap-0">
++          <DialogHeader className="p-4 border-b">
++            <DialogTitle className="text-left font-normal text-[15px] text-gray-800">批量调整商品数量</DialogTitle>
++          </DialogHeader>
++          <div className="p-6 bg-gray-50/50 flex flex-col items-center justify-center gap-3">
++            <div className="w-full max-w-[500px] flex flex-col gap-2">
++              <div className="text-gray-600 text-center whitespace-nowrap text-sm">
++                每行一个 <span className="text-blue-600 font-medium">库存SKU, 数量</span> （支持excel复制粘贴）
++              </div>
++              <textarea 
++                className="w-full h-48 border border-gray-200 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none bg-white"
++                value={batchAdjustText}
++                onChange={(e) => setBatchAdjustText(e.target.value)}
++              />
++            </div>
++          </div>
++          <div className="p-4 border-t flex justify-end gap-3 bg-white">
++            <Button 
++              className="bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-6 font-normal" 
++              onClick={() => {
++                if (!batchAdjustText.trim()) {
++                  setBatchAdjustOpen(false);
++                  return;
++                }
++                
++                const lines = batchAdjustText.split('\n').map(l => l.trim()).filter(Boolean);
++                const updates = new Map<string, number>();
++                
++                lines.forEach(line => {
++                  const parts = line.split(/[\t,]/).map(p => p.trim());
++                  if (parts.length >= 2) {
++                    const sku = parts[0];
++                    const qty = parseInt(parts[1]);
++                    if (sku && !isNaN(qty) && qty > 0) {
++                      updates.set(sku, qty);
++                    }
++                  }
++                });
++
++                if (updates.size > 0) {
++                  const newItems = editItemsData.map(item => {
++                    if (updates.has(item.sku)) {
++                      return { ...item, editQuantity: updates.get(item.sku) };
++                    }
++                    return item;
++                  });
++                  setEditItemsData(newItems);
++                  setToastMessage(`成功匹配并调整了 ${updates.size} 条商品的数量`);
++                  setTimeout(() => setToastMessage(null), 2000);
++                }
++                
++                setBatchAdjustText("");
++                setBatchAdjustOpen(false);
++              }}
++            >
++              确定
++            </Button>
++            <Button variant="outline" className="px-6 border-gray-200 hover:bg-gray-50 text-gray-600 font-normal" onClick={() => {
++              setBatchAdjustText("");
++              setBatchAdjustOpen(false);
++            }}>
++              取消
++            </Button>
++          </div>
++        </DialogContent>
++      </Dialog>
++
++      {/* 编辑采购单 Dialog */}
++      <Dialog open={!!editOrderId} onOpenChange={() => setEditOrderId(null)}>
++        <DialogContent className="w-auto min-w-[1200px] max-w-[calc(100vw-2rem)] flex flex-col p-0 gap-0">
++          <DialogHeader className="p-4 border-b">
++            <DialogTitle className="text-left font-normal text-[15px] text-gray-800">
++              采购商品详情 <span className="text-gray-500 text-sm ml-1">(采购单：{editOrderId && (orders || []).find((o: any) => o.id === editOrderId)?.orderNo} 采购状态：{editOrderId && (orders || []).find((o: any) => o.id === editOrderId)?.status.replace('（未提交）', '')} 付款状态：{editOrderId && (orders || []).find((o: any) => o.id === editOrderId)?.paymentStatus} 币种：RMB)</span>
++            </DialogTitle>
++          </DialogHeader>
++          
++          <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
++            {/* Search/Filter Area */}
++            <div className="flex flex-col gap-3">
++              <div className="flex items-center gap-4 text-sm">
++                <span className="text-gray-600 font-medium whitespace-nowrap">搜索类型</span>
++                <div className="flex items-center gap-4 text-gray-600">
++                  <span className="text-blue-600 border-b-2 border-blue-600 pb-1 cursor-pointer">库存SKU</span>
++                  <span className="cursor-pointer pb-1">库存SKU名称</span>
++                  <span className="cursor-pointer pb-1">原厂sku</span>
++                </div>
++              </div>
++              <div className="flex items-center gap-4 text-sm">
++                <span className="text-gray-600 font-medium whitespace-nowrap">搜索内容</span>
++                <div className="flex items-center max-w-[400px] w-full">
++                  <Input placeholder="请输入关键字" className="rounded-r-none h-8 text-sm focus-visible:ring-0 border-r-0" />
++                  <Button className="h-8 rounded-l-none bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-4 gap-1">
++                    <Search className="w-4 h-4" /> 搜索
++                  </Button>
++                </div>
++              </div>
++              <div>
++                <Button className="h-8 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-4 text-sm font-normal" onClick={() => setBatchAdjustOpen(true)}>批量调整商品数量</Button>
++              </div>
++            </div>
++
++            {/* Table Area */}
++            <div className="border border-gray-100 mt-2">
++              <table className="w-full text-sm text-center">
++                <thead className="bg-[#F5F5F5] sticky top-0 z-10 border-b border-gray-100">
++                  <tr>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">缩略图</th>
++                    <th className="p-3 font-medium text-left whitespace-nowrap text-gray-700">库存SKU/商品名称</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">采购数量</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">已入库/损耗量</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">
++                      <div className="flex items-center justify-center gap-1 group relative">
++                        数量调整 
++                        <HelpCircle className="w-3.5 h-3.5 text-blue-600 cursor-help" />
++                        <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-800 text-white text-[12px] rounded shadow-lg z-50 whitespace-normal text-left font-normal">
++                          数量调整不能低于已入库量；数量调整为0，即在采购单中删除该商品
++                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
++                        </div>
++                      </div>
++                    </th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">上次采购价<br/>最低采购价</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">单价</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">含税单价</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">折扣</th>
++                    <th className="p-3 font-medium whitespace-nowrap text-gray-700">小计</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {editItemsData.map((item, index) => (
++                    <tr key={index} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50">
++                      <td className="p-3 flex justify-center">
++                        <img src={item.imageUrl || "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=product+thumbnail&image_size=square"} alt="thumb" className="w-12 h-12 object-cover border border-gray-200" />
++                      </td>
++                      <td className="p-3 text-left">
++                        <div className="text-gray-800">{item.sku}</div>
++                        <div className="text-gray-600 text-[12px] mt-1 max-w-[200px] leading-snug">{item.name || item.productName}</div>
++                      </td>
++                      <td className="p-3 text-gray-600">{item.quantity}</td>
++                      <td className="p-3 text-gray-600">0/0</td>
++                      <td className="p-3">
++                        <div className="flex items-center justify-center gap-1">
++                          <button 
++                            className="w-6 h-6 flex items-center justify-center bg-[#5C6BC0] text-white rounded hover:bg-[#3F51B5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
++                            disabled={item.editQuantity <= 1}
++                            onClick={() => {
++                              const newItems = [...editItemsData];
++                              newItems[index].editQuantity = Math.max(1, newItems[index].editQuantity - 1);
++                              setEditItemsData(newItems);
++                            }}
++                          >
++                            <Minus className="w-4 h-4" />
++                          </button>
++                          <Input 
++                            className="w-16 h-7 text-center px-1 text-[13px] bg-gray-50 border-gray-200 focus-visible:ring-0" 
++                            readOnly
++                            value={Number(item.editQuantity || 0).toFixed(2)} 
++                          />
++                          <button 
++                            className="w-6 h-6 flex items-center justify-center bg-[#5C6BC0] text-white rounded hover:bg-[#3F51B5] transition-colors"
++                            onClick={() => {
++                              const newItems = [...editItemsData];
++                              newItems[index].editQuantity = (parseInt(newItems[index].editQuantity) || 0) + 1;
++                              setEditItemsData(newItems);
++                            }}
++                          >
++                            <Plus className="w-4 h-4" />
++                          </button>
++                        </div>
++                      </td>
++                      <td className="p-3 text-gray-600 leading-snug">
++                        15 RMB<br/>10 RMB
++                      </td>
++                      <td className="p-3">
++                        <div className="flex items-center justify-center">
++                          <Input 
++                            className="w-20 h-7 text-center px-1 text-[13px] rounded-r-none border-r-0 focus-visible:ring-1 focus-visible:ring-[#03A9F4] focus-visible:z-10" 
++                            value={item.editPrice}
++                            onChange={(e) => {
++                              const newItems = [...editItemsData];
++                              newItems[index].editPrice = e.target.value;
++                              setEditItemsData(newItems);
++                            }}
++                            onBlur={(e) => {
++                              let val = parseFloat(e.target.value);
++                              if (isNaN(val) || val < 0) val = 0;
++                              const newItems = [...editItemsData];
++                              newItems[index].editPrice = val.toFixed(4);
++                              setEditItemsData(newItems);
++                            }}
++                          />
++                          <button className="h-7 px-2 border border-gray-200 bg-gray-50 rounded-r-md text-[#5C6BC0] hover:bg-gray-100 flex items-center justify-center">
++                            <Send className="w-3.5 h-3.5" />
++                          </button>
++                        </div>
++                      </td>
++                      <td className="p-3 text-gray-800">{Number(item.editPrice || 0).toFixed(0)}</td>
++                      <td className="p-3">
++                        <div className="flex items-center justify-center">
++                          <Input 
++                            className="w-16 h-7 text-center px-1 text-[13px] rounded-r-none border-r-0 focus-visible:ring-1 focus-visible:ring-[#03A9F4] focus-visible:z-10" 
++                            value={item.editDiscount}
++                            onChange={(e) => {
++                              const newItems = [...editItemsData];
++                              newItems[index].editDiscount = e.target.value;
++                              setEditItemsData(newItems);
++                            }}
++                            onBlur={(e) => {
++                              let val = parseFloat(e.target.value);
++                              if (isNaN(val) || val < 0) val = 0;
++                              const newItems = [...editItemsData];
++                              newItems[index].editDiscount = val.toFixed(2);
++                              setEditItemsData(newItems);
++                            }}
++                          />
++                          <button className="h-7 px-2 border border-gray-200 bg-gray-50 rounded-r-md text-[#5C6BC0] hover:bg-gray-100 flex items-center justify-center">
++                            <Send className="w-3.5 h-3.5" />
++                          </button>
++                        </div>
++                      </td>
++                      <td className="p-3">
++                        <Input 
++                          readOnly 
++                          className="w-20 h-7 text-center px-1 text-[13px] bg-gray-50 border-gray-200 focus-visible:ring-0" 
++                          value={Math.max(0, Number(item.editQuantity || 0) * Number(item.editPrice || 0) * Number(item.editDiscount || 1)).toFixed(2)}
++                        />
++                      </td>
++                    </tr>
++                  ))}
++                </tbody>
++              </table>
++            </div>
++          </div>
++      
++          {/* Footer Area */}
++          <div className="p-4 border-t flex justify-between items-center bg-gray-50/50">
++            <div className="text-sm text-gray-700 flex gap-4">
++              <span>商品合计金额：<span className="text-blue-600">{editItemsData.reduce((acc, item) => acc + Math.max(0, Number(item.editQuantity || 0) * Number(item.editPrice || 0) * Number(item.editDiscount || 1)), 0).toFixed(2)}</span> RMB</span>
++              <span>采购单实付金额：<span className="text-blue-600">{editItemsData.reduce((acc, item) => acc + Math.max(0, Number(item.editQuantity || 0) * Number(item.editPrice || 0) * Number(item.editDiscount || 1)), 0).toFixed(2)}</span> RMB</span>
++              <span>差异金额：<span className="text-blue-600">0.00</span> RMB</span>
++            </div>
++            <div className="flex gap-3">
++              <Button className="bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-6 font-normal" onClick={() => {
++                const totalQty = editItemsData.reduce((acc, item) => acc + Number(item.editQuantity || 0), 0);
++                const totalPrice = editItemsData.reduce((acc, item) => acc + Math.max(0, Number(item.editQuantity || 0) * Number(item.editPrice || 0) * Number(item.editDiscount || 1)), 0);
++                
++                setOrders((prev: any[]) => prev.map(o => {
++                  if (o.id === editOrderId) {
++                    return {
++                      ...o,
++                      items: editItemsData.map(i => ({
++                        ...i,
++                        quantity: Number(i.editQuantity),
++                        price: Number(i.editPrice),
++                        discount: Number(i.editDiscount),
++                        totalAmount: Math.max(0, Number(i.editQuantity || 0) * Number(i.editPrice || 0) * Number(i.editDiscount || 1))
++                      })),
++                      totalQuantity: totalQty,
++                      totalPrice: totalPrice,
++                    };
++                  }
++                  return o;
++                }));
++                setToastMessage('编辑保存成功');
++                setTimeout(() => setToastMessage(null), 2000);
++                setEditOrderId(null);
++              }}>确定</Button>
++              <Button variant="outline" className="px-6 border-gray-200 hover:bg-gray-50 text-gray-600 font-normal" onClick={() => setEditOrderId(null)}>取消</Button>
++            </div>
++          </div>
++        </DialogContent>
++      </Dialog>
++
++      <Dialog open={!!voidOrderId} onOpenChange={() => {
++        setVoidOrderId(null);
++        setVoidType('all');
++        setVoidSelections({});
++        setVoidQuantities({});
++        setVoidSearchKeyword('');
++        setVoidSyncPlatform(false);
++      }}>
++        <DialogContent className={cn("p-0 gap-0 overflow-x-hidden transition-all duration-200", voidType === 'partial' ? "max-w-[900px]" : "max-w-[500px]")}>
++          <DialogHeader className="p-4 border-b border-gray-200">
++            <DialogTitle className="text-[15px] font-normal text-gray-800 flex items-center justify-between">
++              作废采购单或者部分商品
++              <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center cursor-pointer mr-4">
++                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
++              </div>
++            </DialogTitle>
++          </DialogHeader>
++          
++          <div className="p-4 flex flex-col gap-4">
++            {/* 单选切换区域 */}
++            <div className="flex items-center gap-8">
++              <label className="flex items-center gap-2 cursor-pointer text-[13px] text-gray-700">
++                <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", voidType === 'all' ? "border-[#6B8EBE]" : "border-gray-300")}>
++                  {voidType === 'all' && <div className="w-2 h-2 rounded-full bg-[#6B8EBE]" />}
++                </div>
++                作废整个采购单
++                <input type="radio" className="hidden" checked={voidType === 'all'} onChange={() => setVoidType('all')} />
++              </label>
++              
++              <label className="flex items-center gap-2 cursor-pointer text-[13px] text-gray-700">
++                <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", voidType === 'partial' ? "border-[#E6A23C]" : "border-gray-300")}>
++                  {voidType === 'partial' && <div className="w-2 h-2 rounded-full bg-[#E6A23C]" />}
++                </div>
++                <div className="flex items-center gap-1 bg-[#FFF8E6] text-[#E6A23C] px-1.5 py-0.5 rounded-sm">
++                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
++                  作废部分商品
++                </div>
++                <input type="radio" className="hidden" checked={voidType === 'partial'} onChange={() => setVoidType('partial')} />
++              </label>
++      
++              {/* 部分作废时的搜索框 */}
++              {voidType === 'partial' && (
++                <div className="flex items-center ml-auto">
++                  <select className="h-8 border border-gray-200 border-r-0 rounded-l text-[13px] px-2 outline-none text-gray-600 bg-white">
++                    <option>库存SKU</option>
++                    <option>商品名称</option>
++                  </select>
++                  <Input 
++                    placeholder="请输入搜索内容" 
++                    className="w-48 h-8 rounded-none border-x-0 focus-visible:ring-0 text-[13px]"
++                    value={voidSearchKeyword}
++                    onChange={(e) => setVoidSearchKeyword(e.target.value)}
++                  />
++                  <Button className="h-8 rounded-l-none bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white px-4">
++                    <Search className="w-3.5 h-3.5 mr-1" /> 搜索
++                  </Button>
++                </div>
++              )}
++            </div>
++      
++            {/* 部分作废商品列表 */}
++            {voidType === 'partial' && (
++              <div className="border border-gray-200 mt-2 max-h-[400px] overflow-y-auto custom-scrollbar">
++                <table className="w-full text-sm text-left">
++                  <thead className="bg-[#F8FAFC] sticky top-0 z-10 border-b border-gray-200 text-gray-600">
++                    <tr>
++                      <th className="p-3 w-12 text-center">
++                        <Checkbox 
++                          checked={
++                            voidOrderId && 
++                            (orders || []).find((o: any) => o.id === voidOrderId)?.items?.length > 0 &&
++                            Object.keys(voidSelections).length === (orders || []).find((o: any) => o.id === voidOrderId)?.items?.length &&
++                            Object.values(voidSelections).every(Boolean)
++                          }
++                          onCheckedChange={(c) => {
++                            const order = (orders || []).find((o: any) => o.id === voidOrderId);
++                            if (!order || !order.items) return;
++                            const newSelections: Record<number, boolean> = {};
++                            const newQuantities: Record<number, number> = {};
++                            if (c) {
++                              order.items.forEach((item: any, idx: number) => {
++                                newSelections[idx] = true;
++                                newQuantities[idx] = item.quantity;
++                              });
++                            }
++                            setVoidSelections(newSelections);
++                            setVoidQuantities(newQuantities);
++                          }}
++                        />
++                      </th>
++                      <th className="p-3 font-normal w-24">缩略图</th>
++                      <th className="p-3 font-normal min-w-[300px]">库存SKU/商品名称</th>
++                      <th className="p-3 font-normal w-24 text-center">原数量</th>
++                      <th className="p-3 font-normal w-32 text-center">作废数量</th>
++                    </tr>
++                  </thead>
++                  <tbody className="divide-y divide-gray-100">
++                    {(() => {
++                      const order = (orders || []).find((o: any) => o.id === voidOrderId);
++                      if (!order || !order.items) return null;
++                      
++                      const filteredItems = order.items.map((item: any, index: number) => ({ item, index }))
++                        .filter(({ item }: any) => {
++                          if (!voidSearchKeyword) return true;
++                          const kw = voidSearchKeyword.toLowerCase();
++                          return item.sku?.toLowerCase().includes(kw) || item.name?.toLowerCase().includes(kw) || item.productName?.toLowerCase().includes(kw);
++                        });
++      
++                      if (filteredItems.length === 0) {
++                        return <tr><td colSpan={5} className="p-8 text-center text-gray-500">无匹配商品</td></tr>;
++                      }
++      
++                      return filteredItems.map(({ item, index }: any) => (
++                        <tr key={index} className="hover:bg-gray-50/50">
++                          <td className="p-3 text-center align-middle">
++                            <Checkbox 
++                              checked={!!voidSelections[index]}
++                              onCheckedChange={(c) => {
++                                setVoidSelections(prev => ({ ...prev, [index]: !!c }));
++                                if (c) {
++                                  setVoidQuantities(prev => ({ ...prev, [index]: item.quantity }));
++                                } else {
++                                  setVoidQuantities(prev => {
++                                    const next = { ...prev };
++                                    delete next[index];
++                                    return next;
++                                  });
++                                }
++                              }}
++                            />
++                          </td>
++                          <td className="p-3">
++                            <img src={item.imageUrl || "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=product+thumbnail&image_size=square"} alt="thumb" className="w-12 h-12 object-cover border border-gray-200 rounded" />
++                          </td>
++                          <td className="p-3">
++                            <div className="text-gray-800 text-[13px]">{item.sku}</div>
++                            <div className="text-gray-500 text-[12px] mt-1 line-clamp-2">{item.name || item.productName}</div>
++                          </td>
++                          <td className="p-3 text-center text-gray-600">{item.quantity}</td>
++                          <td className="p-3 text-center">
++                            <Input 
++                              type="number"
++                              min={1}
++                              max={item.quantity}
++                              value={voidQuantities[index] || ''}
++                              disabled={!voidSelections[index]}
++                              onChange={(e) => {
++                                let val = parseInt(e.target.value);
++                                if (isNaN(val)) val = 1;
++                                if (val > item.quantity) val = item.quantity;
++                                setVoidQuantities(prev => ({ ...prev, [index]: val }));
++                              }}
++                              className="w-20 mx-auto h-7 text-center px-1 text-[13px] focus-visible:ring-[#6B8EBE]"
++                            />
++                          </td>
++                        </tr>
++                      ));
++                    })()}
++                  </tbody>
++                </table>
++              </div>
++            )}
++          </div>
++      
++          <div className="p-4 border-t border-gray-200 flex items-center justify-end gap-3 bg-gray-50/50">
++            {voidType === 'all' && (
++              <label className="flex items-center gap-2 cursor-pointer text-[13px] text-gray-700 mr-auto ml-2">
++                <Checkbox checked={voidSyncPlatform} onCheckedChange={(c) => setVoidSyncPlatform(!!c)} />
++                是否同步取消1688平台订单
++              </label>
++            )}
++            <Button variant="outline" className="h-8 px-6 text-gray-600 rounded-sm bg-white" onClick={() => {
++              setVoidOrderId(null);
++              setVoidType('all');
++              setVoidSelections({});
++              setVoidQuantities({});
++              setVoidSearchKeyword('');
++            }}>取消</Button>
++            <Button className="h-8 px-6 bg-[#6B8EBE] hover:bg-[#5A7BA8] text-white rounded-sm" onClick={() => {
++              const originalOrder = (orders || []).find((o: any) => o.id === voidOrderId);
++              if (!originalOrder) return;
++      
++              if (voidType === 'all') {
++                // 整单作废
++                setOrders((prev: any[]) => prev.map(o => {
++                  if (o.id === voidOrderId) {
++                    return { 
++                      ...o, 
++                      status: '已作废',
++                      totalPurchaseQty: o.totalQuantity,
++                      unInboundQty: o.totalQuantity,
++                      inboundQty: 0,
++                      actualPayAmount: o.totalPrice
++                    };
++                  }
++                  return o;
++                }));
++                setToastMessage('整单作废成功');
++              } else {
++                // 部分作废
++                const itemsToVoid = Object.entries(voidSelections)
++                  .filter(([_, isSelected]) => isSelected)
++                  .map(([indexStr]) => {
++                    const idx = parseInt(indexStr);
++                    const qty = voidQuantities[idx] || originalOrder.items[idx].quantity;
++                    return { originalIndex: idx, voidQty: qty, item: originalOrder.items[idx] };
++                  });
++      
++                if (itemsToVoid.length === 0) {
++                  alert('请至少勾选一条需要作废的商品');
++                  return;
++                }
++      
++                const voidOrderNo = originalOrder.orderNo; 
++                const remainOrderNo = 'PO' + Date.now(); 
++      
++                const voidItems = itemsToVoid.map(s => ({
++                  ...s.item,
++                  quantity: s.voidQty,
++                  totalAmount: s.voidQty * (s.item.price || 0)
++                }));
++      
++                const voidOrder = {
++                  ...originalOrder,
++                  id: Date.now().toString() + '_void',
++                  orderNo: voidOrderNo,
++                  items: voidItems,
++                  totalQuantity: voidItems.reduce((acc, cur) => acc + cur.quantity, 0),
++                  totalPurchaseQty: voidItems.reduce((acc, cur) => acc + cur.quantity, 0),
++                  unInboundQty: voidItems.reduce((acc, cur) => acc + cur.quantity, 0),
++                  inboundQty: 0,
++                  totalPrice: voidItems.reduce((acc, cur) => acc + cur.totalAmount, 0),
++                  actualPayAmount: voidItems.reduce((acc, cur) => acc + cur.totalAmount, 0),
++                  remark: `部分商品作废`,
++                  status: '已作废',
++                  createdAt: new Date().toISOString()
++                };
++      
++                const remainItems = originalOrder.items.map((item: any, idx: number) => {
++                  const voidRecord = itemsToVoid.find(v => v.originalIndex === idx);
++                  if (voidRecord) {
++                    return {
++                      ...item,
++                      quantity: item.quantity - voidRecord.voidQty,
++                      totalAmount: (item.quantity - voidRecord.voidQty) * (item.price || 0)
++                    };
++                  }
++                  return item;
++                }).filter((item: any) => item.quantity > 0);
++      
++                if (remainItems.length === 0) {
++                  setOrders((prev: any[]) => prev.map(o => {
++                    if (o.id === voidOrderId) {
++                      return { 
++                        ...o, 
++                        status: '已作废',
++                        totalPurchaseQty: o.totalQuantity,
++                        unInboundQty: o.totalQuantity,
++                        inboundQty: 0,
++                        actualPayAmount: o.totalPrice
++                      };
++                    }
++                    return o;
++                  }));
++                  setToastMessage('所有商品均被作废，已转为整单作废');
++                } else {
++                  setOrders((prev: any[]) => {
++                    const next = prev.map(o => {
++                      if (o.id === voidOrderId) {
++                        const newRemainQty = remainItems.reduce((acc: number, cur: any) => acc + cur.quantity, 0);
++                        const newRemainPrice = remainItems.reduce((acc: number, cur: any) => acc + cur.totalAmount, 0);
++                        return {
++                          ...o,
++                          orderNo: remainOrderNo,
++                          items: remainItems,
++                          totalQuantity: newRemainQty,
++                          totalPurchaseQty: newRemainQty,
++                          unInboundQty: newRemainQty,
++                          inboundQty: 0,
++                          totalPrice: newRemainPrice,
++                          actualPayAmount: newRemainPrice,
++                          remark: `原单号${voidOrderNo}部分商品作废后生成的新单`
++                        };
++                      }
++                      return o;
++                    });
++                    return [voidOrder, ...next]; 
++                  });
++                  setToastMessage('部分商品作废成功');
++                }
++              }
++      
++              setTimeout(() => setToastMessage(null), 2000);
++              setVoidOrderId(null);
++              setVoidType('all');
++              setVoidSelections({});
++              setVoidQuantities({});
++              setVoidSearchKeyword('');
++            }}>确定</Button>
++          </div>
++        </DialogContent>
++      </Dialog>
++
+       {/* 8. 操作日志 */}
+       <Dialog open={operationLogOpen} onOpenChange={setOperationLogOpen}>

@@ -1,0 +1,173 @@
+<h2>备货跟踪（采购流程新增二级菜单）— 页面线框图 v1</h2>
+<p class="subtitle">SKU 维度风险看板：支持复合筛选、预警规则配置（localStorage）与批量发送通知（交互占位）</p>
+
+<div class="mockup">
+  <div class="mockup-header">搜索筛选区</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+      <div style="min-width:220px">
+        <div class="subtitle" style="margin:0 0 6px 0">店铺（必选/默认全选）</div>
+        <div class="placeholder" style="padding:10px 12px">下拉单选（可搜索）｜默认：全选</div>
+      </div>
+      <div style="min-width:240px">
+        <div class="subtitle" style="margin:0 0 6px 0">商品信息（SKU/名称）</div>
+        <div class="placeholder" style="padding:10px 12px">关键字模糊查询</div>
+      </div>
+      <div style="min-width:320px">
+        <div class="subtitle" style="margin:0 0 6px 0">备货时间</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="placeholder" style="padding:10px 12px;flex:1">开始日期</div>
+          <span class="subtitle">~</span>
+          <div class="placeholder" style="padding:10px 12px;flex:1">结束日期</div>
+        </div>
+      </div>
+      <div style="min-width:180px">
+        <div class="subtitle" style="margin:0 0 6px 0">预警状态</div>
+        <div class="placeholder" style="padding:10px 12px">全部 / 正常 / 触发预警</div>
+      </div>
+      <div style="min-width:340px;flex:1">
+        <div class="subtitle" style="margin:0 0 6px 0">预警类型（多选）</div>
+        <div class="placeholder" style="padding:10px 12px">断货风险 / 备货不足 / 滞销 / 积压 / 到货延迟</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="mock-button">重置</button>
+        <button class="mock-button" style="background:#2563eb">查询</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:14px">
+  <div class="mockup-header">操作按钮区</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="mock-button" style="background:#2563eb">批量发送预警通知</button>
+      <button class="mock-button">数据导出</button>
+      <button class="mock-button" style="margin-left:auto">预警规则配置</button>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:14px">
+  <div class="mockup-header">数据列表区（复杂表头分组 + 风险标签）</div>
+  <div class="mockup-body">
+    <div style="overflow:auto;border:1px solid #e5e7eb;border-radius:8px">
+      <table style="border-collapse:collapse;min-width:1200px;width:100%;font-size:12px">
+        <thead>
+          <tr style="background:#f8fafc;color:#475569">
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px;width:40px" rowspan="2">✓</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" colspan="5">基础信息</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" colspan="5">库存状态</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" colspan="3">销售与周转</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" colspan="3">财务数据</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" colspan="2">时间节点</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" colspan="1">预警状态</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px" rowspan="2" style="width:90px">操作</th>
+          </tr>
+          <tr style="background:#f8fafc;color:#475569">
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">店铺</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">库存SKU</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">中文名称</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">设计编码</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">商品备注</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">仓位库存</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">可用库存量</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">在途量</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">未发货量</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">调拨未发货</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">预测日销量</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">可售天数</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">采购天数</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">成本价</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">在途货值</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">总价值</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">最后入库</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">最后出库</th>
+            <th style="border-bottom:1px solid #e5e7eb;padding:10px">当前预警类型</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#fff">
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:center"><input type="checkbox" /></td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">亚马逊-US-01</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;color:#2563eb">SKU00123</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">蓝牙耳机-黑色（Pro Max）</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">D-10006</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">热销款，需重点关注</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">120</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right;font-weight:600">50</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right;color:#f97316">300</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">70</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">0</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">60</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right;color:#ef4444;font-weight:700">0 天</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">15 天</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">¥45</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">¥13,500</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">¥18,900</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">2026-03-25</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">2026-04-09</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">
+              <span style="display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;background:#fee2e2;color:#dc2626;font-weight:600">断货风险</span>
+              <span style="display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;background:#ffedd5;color:#c2410c;font-weight:600;margin-left:6px">到货延迟</span>
+            </td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:center"><a href="#" style="color:#2563eb;text-decoration:none">发送通知</a></td>
+          </tr>
+          <tr style="background:#fff">
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:center"><input type="checkbox" /></td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">亚马逊-UK-02</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;color:#2563eb">SKU00998</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">便携式投影仪-白色</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">D-10012</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">新款测试</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">800</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right;font-weight:600">750</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">0</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">50</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">0</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">5</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right;font-weight:700">150 天</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">30 天</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">¥120</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">¥0</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:right">¥96,000</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">2026-03-01</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">2026-03-15</td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px">
+              <span style="display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;background:#ede9fe;color:#6d28d9;font-weight:600">库存积压</span>
+            </td>
+            <td style="border-bottom:1px solid #f1f5f9;padding:10px;text-align:center"><a href="#" style="color:#2563eb;text-decoration:none">发送通知</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:14px">
+  <div class="mockup-header">右侧抽屉（可选：点击 SKU 打开）</div>
+  <div class="mockup-body">
+    <div class="placeholder" style="padding:14px">
+      展示：当前诊断（风险标签）、关键指标卡片（可用/在途/可售天数）、近30天销量趋势（占位折线图）、时间节点与财务数据
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:16px">下一步要确认</h3>
+<p class="subtitle">“预警规则配置”弹框的交互：要做成「5条规则每条可编辑阈值 + 保存到 localStorage」即可？还是需要支持启用/禁用、不同店铺/仓库差异化？</p>
+<div class="options">
+  <div class="option" data-choice="simple-rules" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>统一阈值（推荐）</h3>
+      <p>全局 5 条规则阈值可编辑，保存 localStorage，列表按阈值实时重算</p>
+    </div>
+  </div>
+  <div class="option" data-choice="advanced-rules" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>支持启用/禁用</h3>
+      <p>每条规则增加开关；仍为全局阈值（不做店铺/仓库差异）</p>
+    </div>
+  </div>
+</div>

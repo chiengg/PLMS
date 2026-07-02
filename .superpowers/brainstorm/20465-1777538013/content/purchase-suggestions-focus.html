@@ -1,0 +1,28 @@
+<h2>采购建议：本轮设计范围</h2>
+<p class="subtitle">先确定交付边界：你希望优先覆盖哪些能力？</p>
+
+<div class="options">
+  <div class="option" data-choice="common-first" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>通用能力优先</h3>
+      <p>先抽象两类建议共用的：筛选模型、表格列体系、分组/汇总、批量操作与加入计划</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="stock-first" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>先做备货建议</h3>
+      <p>以“备货”为主流程先做到可验收，再复用扩展到缺货建议</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="shortage-first" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>先做缺货建议</h3>
+      <p>以“缺货”为主流程先做到可验收，再复用扩展到备货建议</p>
+    </div>
+  </div>
+</div>

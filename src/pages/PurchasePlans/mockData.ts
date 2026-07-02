@@ -1,0 +1,58 @@
+import type { PlanGroup } from './types'
+
+export const mockPlans: PlanGroup[] = [
+  {
+    planNumber: 'JH20260408092304000',
+    buyerName: '张伟',
+    totalProducts: 1,
+    totalQuantity: 10,
+    totalPrice: 1000,
+    items: [
+      {
+        id: 'plan-p1',
+        buyer: '张伟',
+        supplierName: '深圳优声电子有限公司',
+        sku: 'CN-BT-001',
+        name: '无线蓝牙耳机 Pro Max',
+        warehouse: 'FBA-US-东部',
+        quantity: 10,
+        purchasePrice: 100,
+        inbound: '--',
+        loss: 0,
+        notes: '--',
+        logistics: '--',
+        status: '未采购',
+        source: '备货建议',
+        creator: '系统',
+        createTime: '2026/4/8 09:23:04',
+      },
+    ],
+  },
+  {
+    planNumber: 'JH20260408103015000',
+    buyerName: '李娜',
+    totalProducts: 1,
+    totalQuantity: 5,
+    totalPrice: 250,
+    items: [
+      {
+        id: 'plan-p2',
+        buyer: '李娜',
+        supplierName: '东莞市欣荣电子有限公司',
+        sku: 'CN-CH-002',
+        name: '快充充电器 65W',
+        warehouse: 'FBA-EU-西部',
+        quantity: 5,
+        purchasePrice: 50,
+        inbound: '--',
+        loss: 0,
+        notes: '--',
+        logistics: '--',
+        status: '未采购',
+        source: '备货建议',
+        creator: '系统',
+        createTime: '2026/4/8 10:30:15',
+      },
+    ],
+  },
+]

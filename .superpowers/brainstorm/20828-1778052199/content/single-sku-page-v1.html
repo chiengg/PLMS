@@ -1,0 +1,52 @@
+<h2>单品SKU（新二级菜单）— 页面线框图 v1</h2>
+<p class="subtitle">基于你给的现有系统截图做结构复刻，并补齐“状态/活跃度”查询条件与新增表单字段</p>
+
+<div class="mockup">
+  <div class="mockup-header">查询条件（示意）</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div class="placeholder" style="padding:10px 12px;min-width:130px">版型编码</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:150px">产品名称</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:170px">库存SKU编码（模糊）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:140px">主分类（下拉）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:120px">品牌（下拉）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:180px">产品类目（下拉）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:160px">自定义分类（下拉）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:180px">状态（全部/自动创建/等待开发/正常销售/商品清仓/停止销售）</div>
+      <div class="placeholder" style="padding:10px 12px;min-width:140px">活跃度（全部/爆款/旺款/平款/滞销款）</div>
+      <button class="mock-button" style="margin-left:auto">搜索</button>
+      <button class="mock-button" style="background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe">重置</button>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:14px">
+  <div class="mockup-header">列表字段（示意，横向滚动 + 左侧固定：勾选/版型编码/图片/产品名称/库存SKU）</div>
+  <div class="mockup-body">
+    <div class="placeholder" style="height:320px;display:flex;align-items:center;justify-content:center">
+      表格区域（按字段清单渲染，右侧可滚动）
+    </div>
+    <div class="subtitle" style="margin-top:10px">
+      字段：版型编码、产品图片、产品名称、库存SKU编码、状态、库存总数、可用库存数、仓库预测日销量、仓库7/28/42销量、采购在途量、仓库未发货量、库存在途数、代发基价、主分类、商品类目、自定义分类、申报英文名称、申报中文名称、品牌、选品员、开发员、创建人、最后更新时间、创建时间、最后更新人、备注
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:16px">需要你确认的一个关键点</h3>
+<p class="subtitle">“单品SKU”列表的数据源第一版从哪里来？（选一项）</p>
+<div class="options">
+  <div class="option" data-choice="from-products" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>复用商品模块 products_data_v1</h3>
+      <p>从现有商品列表数据派生单品SKU列表（缺失字段先显示 --）</p>
+    </div>
+  </div>
+  <div class="option" data-choice="separate-mock" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>单品SKU独立 mock + localStorage</h3>
+      <p>新建 single_sku_data_v1（更贴合字段，但与商品列表需要后续同步规则）</p>
+    </div>
+  </div>
+</div>

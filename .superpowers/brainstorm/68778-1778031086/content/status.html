@@ -1,0 +1,25 @@
+<h2>可视化预览已就绪</h2>
+<p class="subtitle">如果你看到 “Waiting for the agent to push a screen...”，刷新页面即可显示本屏</p>
+
+<div class="section">
+  <div class="label">当前进度</div>
+  <p>已完成：Task 1（Vitest 基线）、Task 2（采购建议 types/utils + 单测）。</p>
+  <p>待执行：Task 3（筛选状态上抬 + 必选四项受控筛选 + 表格按 filters 过滤）。</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="continue-task3" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>继续执行 Task 3</h3>
+      <p>把筛选项（SKU/名称、仓库、供应商、采购员）变成受控，并驱动表格过滤</p>
+    </div>
+  </div>
+  <div class="option" data-choice="pause" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>暂停</h3>
+      <p>先不改代码，只保持预览用于后续讨论</p>
+    </div>
+  </div>
+</div>
